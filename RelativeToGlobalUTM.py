@@ -49,6 +49,7 @@ def main():
 	print('array size:')
 	print(size)
 
+	# add offset to x/y utm
 	for input in inputData:
 		newlat = latitude+rw_x
 		newlong = longitude+rw_y
