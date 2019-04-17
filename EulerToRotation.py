@@ -1,33 +1,31 @@
-#rotation test
+#!/usr/bin/python
 import numpy as np
 import argparse
 
 def parse_args():
-	OUTPUT_DIR = ''
-	arg_parser = argparse.ArgumentParser(description='generate mapper trajectory file from novatel session.txt file')
+	arg_parser = argparse.ArgumentParser(description='generate mapper trajectory file from novatel session_localization.txt file')
 	arg_parser.add_argument('--input_file', 
 							required=True, 
-							help='novatel session.txt file')
-	#arg_parser.add_argument('--output file',
-	#						required=True,
-	#						help='resulting mapper trajectory output file')
+							help='novatel session_localization.txt file')
+	arg_parser.add_argument('--output_file',
+							required=True,
+							help='resulting mapper trajectory output file')
 	return arg_parser.parse_args()
 
 def main():
-	#parse arguments from terminal
+	# data input
 	args = parse_args()
 	inputData = np.genfromtxt(args.input_file , skip_header=27, skip_footer=10)
-	print("data imported")
+	print("data has been imported")
 	
-	# yaw = inputData[:,6]
-	# pitch = inputData[:,7]
-	# roll = inputData[:,8]
+	# bringing in data from input file
 	easting = inputData[:,9]
 	northing = inputData[:,10]
 	alt = inputData[:,14]
 	time = inputData[:,12]
 	output = np.zeros((len(inputData),9), dtype=np.float32)
 
+	# euler to rotation matrix conversion using novatel reference frame (y=forward, x=right, z=up)
 	for i, row in enumerate(inputData):
 		yaw = row[6]/180*np.pi
 		pitch = row[7]/180*np.pi
@@ -47,20 +45,24 @@ def main():
 		rotationMatrix = np.dot(rotation_z, np.dot(rotation_y, rotation_x ))
 		output[i,:] = rotationMatrix.reshape((1, 9))
 
-		# reshapeMatrix = rotationMatrix.reshape(1,9) 
-		# print(reshapeMatrix)   
-		x = easting
+		x = easting 
 		y = northing
 		height = alt
 		utc = time
 
-	print("rotation matrix array size: ", rotationMatrix.size)
-	print("easting array size: ", x.size)
-	print("northing array size: ", y.size)
-	print("alt array size: ", height.size)
-	print("time array size: ", utc.size)
+
+	# print('rotation matrix array size: ', rotationMatrix.size)
+	# print('easting array size: ', x.size)
+	# print('northing array size: ', y.size)
+	# print('alt array size: ', height.size)
+	# print('time array size: ', utc.size)
+	
+	# file output
 	dataOutput = np.column_stack((output,easting,northing,alt,time))
-	np.savetxt('novatel_localization.txt', dataOutput, delimiter='')
+	np.savetxt(args.output_file, dataOutput, fmt='%.5f' ,delimiter=' ') # 5 signifigant digits
+
+	# victory
+	print("file has been written to output directory")
 
 if __name__=='__main__':
 	main()
