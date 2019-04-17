@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import numpy as np
 import argparse
+from transformations import euler_from_matrix
 
 def parse_args():
 	arg_parser = argparse.ArgumentParser(description='generate mapper trajectory file from novatel session_localization.txt file')
@@ -31,12 +32,12 @@ def main():
 		pitch = row[7]/180*np.pi
 		roll = row[8]/180*np.pi
 		rotation_x = np.array([[1, 0, 0],
-	                	   	  [0, np.cos(pitch), -np.sin(pitch)],
-	                	   	  [0, np.sin(pitch), np.cos(pitch)]])
+	                	   	  [0, np.cos(roll), -np.sin(roll)],
+	                	   	  [0, np.sin(roll), np.cos(roll)]])
 
-		rotation_y = np.array([[np.cos(roll), 0, np.sin(roll)],
+		rotation_y = np.array([[np.cos(pitch), 0, np.sin(pitch)],
 		                	   [0, 1, 0],
-		                	   [-np.sin(roll), 0, np.cos(roll)]])
+		                	   [-np.sin(pitch), 0, np.cos(pitch)]])
 	                 
 		rotation_z = np.array([[np.cos(yaw), -np.sin(yaw), 0],
 		                	   [np.sin(yaw), np.cos(yaw), 0],
@@ -45,11 +46,20 @@ def main():
 		rotationMatrix = np.dot(rotation_z, np.dot(rotation_y, rotation_x ))
 		output[i,:] = rotationMatrix.reshape((1, 9))
 
+		print("my matrix: ")
+		print(rotationMatrix)
+
+		# standard euler angle representation: roll, pitch, yaw
+		print("novatel euler: (roll, pitch, yaw)")
+		print(roll, pitch, yaw)
+
+		print("euler angles from matrix: (roll, pitch, yaw)")
+		print(euler_from_matrix(rotationMatrix))
+
 		x = easting 
 		y = northing
 		height = alt
 		utc = time
-
 
 	# print('rotation matrix array size: ', rotationMatrix.size)
 	# print('easting array size: ', x.size)
@@ -62,7 +72,7 @@ def main():
 	np.savetxt(args.output_file, dataOutput, fmt='%.5f' ,delimiter=' ') # 5 signifigant digits
 
 	# victory
-	print("file has been written to output directory"
+	print("file has been written to output directory")
 
 if __name__=='__main__':
 	main()
