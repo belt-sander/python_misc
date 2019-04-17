@@ -62,7 +62,7 @@ def main():
 	np.savetxt(args.output_file, dataOutput, fmt='%.5f' ,delimiter=' ') # 5 signifigant digits
 
 	# victory
-	print("file has been written to output directory")
+	print("file has been written to output directory"
 
 if __name__=='__main__':
 	main()
