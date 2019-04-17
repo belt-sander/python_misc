@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import argparse
 
 def parse_args():
-	arg_parser = argparse.ArgumentParser(description='add/subtract offsets to relative UTM positions in mapper trajectory file format') 
+	arg_parser = argparse.ArgumentParser(description='add/subtract offsets to relative UTM positions in mapper trajectory file format. ptc inner: x=-541254, y=-5367997 / ptc outer_a: x=-541218, y=-5367960 / ptc outer_b: x=-541219, y=-5367961') 
 	arg_parser.add_argument('--input_file',
 							required=True,
 							help='input file in mapper trajectory format')
