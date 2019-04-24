@@ -75,7 +75,7 @@ def main():
 		gpsUTCPosix[i,:	] = (gpsTimeToPosix(gpsTime, 18))
 
 	dataOutput = np.column_stack((gpsUTCPosix,accX,accY,accZ,gyroX,gyroY,gyroZ,lat,longitude,alt,yaw,pitch,roll,quat0,quat1,quat2,quatW))
-	np.savetxt(args.output_file, dataOutput, fmt='%.8f', delimiter=' ', header="### gpsUTCPosix,accX,accY,accZ,gyroX,gyroY,gyroZ,lat,longitude,alt,yaw,pitch,roll,quat0,quat1,quat2,quatW", comments='')
+	np.savetxt(args.output_file, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsUTCPosix,accX,accY,accZ,gyroX,gyroY,gyroZ,lat,longitude,alt,yaw,pitch,roll,quat0,quat1,quat2,quatW", comments='')
 
 	plt.subplot(4,1,1)
 	plt.plot(gpsUTCPosix, pitch, '-o', color='gold')

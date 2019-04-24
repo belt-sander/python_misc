@@ -11,25 +11,32 @@ def parse_args():
 	arg_parser.add_argument('--vn_input_file', 
 							required=True, 
 							help='vectornav CSV input file')
-	arg_parser.add_argument('--ubx_input_file',
+	arg_parser.add_argument('--ubx_input_file_acc',
 							required=True,
-							help='ubx CSV input file')
+							help='ubx CSV input accel/gyro file')
+	arg_parser.add_argument('--ubx_input_file_orient',
+							required=True,
+							help='ubx CSV input orientation file')
 	return arg_parser.parse_args()
 
 def main():
 	args = parse_args()
 	
 	vnData = np.genfromtxt(args.vn_input_file, skip_header=1)
-	ubxData = np.genfromtxt(args.ubx_input_file, skip_header=8, delimiter=',')
+	ubxData = np.genfromtxt(args.ubx_input_file_acc, skip_header=8, delimiter=',')
+	ubxOrientData = np.genfromtxt(args.ubx_input_file_orient, skip_header=6, delimiter=',')
 	print("data has been imported")
 
 	num_vn_poses = np.size(vnData,0)
 	num_ubx_poses = np.size(ubxData,0)
+	num_ubx_orient_poses = np.size(ubxOrientData,0)
 	print("num vn poses: ", num_vn_poses)
 	print("num ubx poses: ", num_ubx_poses)
+	print("num ubx orient poses:", num_ubx_orient_poses)
 
 	vnTimeOut = np.zeros((len(vnData),1))
 	ubxTimeOut = np.zeros((len(ubxData), 1))
+	ubxOrientTimeOut = np.zeros((len(ubxData), 1))
 
 	for i, row in enumerate(vnData):
 		vnTime = row[0]
@@ -41,8 +48,14 @@ def main():
 		# print(ubxTime)
 		ubxTimeOut[i,:] = ubxTime
 	
+	for i, row in enumerate(ubxOrientData):
+		ubxOrientTime = row[0]
+		# print(ubxOrientTime)
+		ubxOrientTimeOut[i,:] = ubxOrientTime
+
 	print(vnTimeOut)
 	print(ubxTimeOut)
+	print(ubxOrientTimeOut)
 
 	# ap method, ugly af
 	# deltaT = np.zeros((num_ubx_poses, num_vn_poses))
@@ -81,25 +94,34 @@ def main():
 	ubxGyroY = ubxData[:,5]
 	ubxGyroZ = ubxData[:,6]
 
-	# plt.figure(1)
-	# plt.subplot(4,1,1)
-	# plt.plot(vnTimeOut, pitch, '-o', color='gold')
-	# plt.ylabel('pitch (deg)')
-	# plt.title('attitude')
+	ubxPreOrientTime = ubxOrientData[:,0]
+	ubxAttitudeX = ubxOrientData[:,1] / 1e5
+	ubxAttitudeY = ubxOrientData[:,2] / 1e5
+	ubxAttitudeZ = ubxOrientData[:,3] / 1e5
 
-	# plt.subplot(4,1,2)
-	# plt.plot(vnTimeOut, roll, '-o', color='green')
-	# plt.ylabel('roll (deg)')
-
-	# plt.subplot(4,1,3)
+	plt.figure(1)
+	plt.subplot(3,1,1)
+	plt.title('attitude')
+	plt.plot(vnTimeOut, roll, '-o', color='gold')
+	plt.plot(vnTimeOut, pitch, '-o', color='green')
 	# plt.plot(vnTimeOut, yaw, '-o', color='red')
-	# plt.ylabel('yaw (deg)')
-	# plt.xlabel('vn time (s)')
-
-	# plt.subplot(4,1,4)
-	# plt.plot(lat, longitude, '-o', color='darkcyan')
-	# plt.ylabel('longitude (deg)')
-	# plt.xlabel('latitude (deg)')
+	plt.xlim((-20+1.55606216e9), (60+1.55606216e9))
+	plt.ylim(-10,14)
+	plt.subplot(3,1,2)
+	plt.title('ubx attitude')
+	plt.plot(ubxPreOrientTime, ubxAttitudeX, '-o', color='gold')
+	plt.plot(ubxPreOrientTime, ubxAttitudeY, '-o', color='green')
+	# plt.plot(ubxPreOrientTime, ubxAttitudeZ, '-o', color='red')
+	plt.xlim((-20+1.55606216e9), (60+1.55606216e9))
+	plt.ylim(-10,14)
+	plt.xlabel('posix UTC (s)')
+	
+	plt.subplot(3,1,3)
+	plt.plot(vnTimeOut, longitude, '-o', color='darkcyan')
+	# plt.plot(vnTimeOut, lat, '-o', color='blue')
+	plt.ylabel('lat / long (deg)')
+	plt.xlim((-20+1.55606216e9), (60+1.55606216e9))
+	plt.xlabel('posix UTC (s)')
 
 	plt.figure(2)
 	plt.subplot(2,1,1)
@@ -107,18 +129,17 @@ def main():
 	plt.plot(vnTimeOut, accY, '-o', color='red')
 	plt.plot(vnTimeOut, accZ, '-o', color='green')
 	plt.ylabel('m/s/s')
-	plt.xlabel('vn time (s)')
-	plt.xlim((0+1.55606216e9), (15+1.55606216e9))
+	plt.xlabel('posix UTC (s)')
+	plt.xlim((6.8+1.55606216e9), (7.8+1.55606216e9))
 	plt.ylim(-11,3)
 	plt.title('vectornav acceleration data')
-
 	plt.subplot(2,1,2)
 	plt.plot(ubxTimeOut, ubxAccX, '-o', color='blue')
 	plt.plot(ubxTimeOut, ubxAccY, '-o', color='red')
 	plt.plot(ubxTimeOut, ubxAccZ, '-o', color='green')
 	plt.ylabel('m/s/s')
-	plt.xlabel('ubx time (s)')
-	plt.xlim((0+1.55606216e9), (15+1.55606216e9))
+	plt.xlabel('posix UTC (s)')
+	plt.xlim((6.8+1.55606216e9), (7.8+1.55606216e9))
 	plt.title('ubx accleration data')
 	plt.ylim(-11,3)
 
