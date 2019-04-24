@@ -54,18 +54,18 @@ def main():
 	gyroX = inputData[:,4]
 	gyroY = inputData[:,5]
 	gyroZ = inputData[:,6]
-	lat = inputData[:,14]
-	longitude = inputData[:,15]
-	alt = inputData[:,16]
-	yaw = inputData[:,17]
-	pitch = inputData[:,18]
-	roll = inputData[:,19]
-	quat0 = inputData[:,20]
-	quat1 = inputData[:,21]
-	quat2 = inputData[:,22]
-	quatW = inputData[:,23]
+	lat = inputData[:,7]
+	longitude = inputData[:,8]
+	alt = inputData[:,9]
+	yaw = inputData[:,10]
+	pitch = inputData[:,11]
+	roll = inputData[:,12]
+	quat0 = inputData[:,13]
+	quat1 = inputData[:,14]
+	quat2 = inputData[:,15]
+	quatW = inputData[:,16]
 
-	# TimeGps,AccX,AccY,AccZ,GyroX,GyroY,GyroZ,Year,Month,Day,Hour,Minute,Second,FracSec,Lat,Lon,Alt,Yaw,Pitch,Roll,Quat[0],Quat[1],Quat[2],Quat[3],VelX,VelY,VelZ
+	# TimeGps,AccX,AccY,AccZ,GyroX,GyroY,GyroZ,Lat,Lon,Alt,Yaw,Pitch,Roll,Quat[0],Quat[1],Quat[2],Quat[3],VelX,VelY,VelZ
 	for i, row in enumerate(inputData):
 		gpsTime = row[0]/1000000000 # microsecond -> second
 		print("previous gps time:")
