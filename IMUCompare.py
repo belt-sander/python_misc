@@ -10,13 +10,13 @@ def parse_args():
 	arg_parser = argparse.ArgumentParser(description='plot and compare imu data between ubx and vn')
 	arg_parser.add_argument('--vn_input_file', 
 							required=True, 
-							help='vectornav CSV input file')
+							help='vectornav_output.txt file only!')
 	arg_parser.add_argument('--ubx_input_file_acc',
 							required=True,
-							help='ubx CSV input accel/gyro file')
+							help='ubx imuData.csv file only!')
 	arg_parser.add_argument('--ubx_input_file_orient',
 							required=True,
-							help='ubx CSV input orientation file')
+							help='ubx attitudeData.csv file only!')
 	return arg_parser.parse_args()
 
 def main():
