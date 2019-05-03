@@ -18,6 +18,14 @@ def parse_args():
 							required=True,
 							type=int,
 							help='amount to offset height above the ellipsoid')
+	arg_parser.add_argument('--x_offset',
+							required=True,
+							type=int,
+							help='offset to x / easting UTM')
+	arg_parser.add_argument('--y_offset',
+							required=True,
+							type=int,
+							help='offset to y / northing UTM')
 	return arg_parser.parse_args()
 
 def main():
@@ -30,7 +38,12 @@ def main():
 
 	new_hMSL = np.zeros((len(inputData),1))
 	old_hMSL = np.zeros((len(inputData),1))
-    # hEll = inputData[:,14]	
+
+	new_utmX = np.zeros((len(inputData),1))
+	old_utmX = np.zeros((len(inputData),1))
+
+	new_utmY = np.zeros((len(inputData),1))
+	old_utmY = np.zeros((len(inputData),1))		
 
 	accX = inputData[:,0]
 	accY = inputData[:,1]
@@ -41,18 +54,25 @@ def main():
 	yaw = inputData[:,6]
 	pitch = inputData[:,7]
 	roll = inputData[:,8]
-	utmX = inputData[:,9]
-	utmY = inputData[:,10]
+	# utmX = inputData[:,9]
+	# utmY = inputData[:,10]
 	hEll = inputData[:,11]
 	utc = inputData[:,12]
 	und = inputData[:,13]
+	# hEll = inputData[:,14]
 
    	for i, row in enumerate(inputData):
 		hMSL = row[14]
 		new_hMSL[i,: ] = hMSL+(args.height_offset)
 		old_hMSL[i,: ] = hMSL
+		utmX = row[9]
+		new_utmX[i,: ] = utmX+(args.x_offset)
+		old_utmX[i,: ] = utmX
+		utmY = row[10]
+		new_utmY[i,: ] = utmY+(args.y_offset)
+		old_utmY[i,: ] = utmY
 
-	dataOutput = np.column_stack((accX,accY,accZ,gyroX,gyroY,gyroZ,yaw,pitch,roll,utmX,utmY,new_hMSL,utc,und,hEll))
+	dataOutput = np.column_stack((accX,accY,accZ,gyroX,gyroY,gyroZ,yaw,pitch,roll,new_utmX,new_utmY,new_hMSL,utc,und,hEll))
 	np.savetxt(args.output_file, dataOutput, fmt='%.8f', delimiter=' ', header="# accX,accY,accZ,gyroX,gyroY,gyroZ,yaw,pitch,roll,utmX,utmY,hEll", comments='')
 	print("data has been exported")
 	print("")
@@ -72,7 +92,7 @@ def main():
 	plt.xlabel('utc/posix time (s)')
 
 	plt.subplot(5,1,4)
-	plt.plot(utmX, utmY, '-o', color='darkcyan')
+	plt.plot(new_utmX, new_utmY, '-o', color='darkcyan')
 	plt.ylabel('longitude (deg)')
 	plt.xlabel('latitude (deg)')
 
