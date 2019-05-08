@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import datetime
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 
 def parse_args():
 	arg_parser = argparse.ArgumentParser(description='plot and compare imu data between ubx and vn')
