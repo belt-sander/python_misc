@@ -45,7 +45,6 @@ def main():
 	plt.plot(resizedPoseTime, poseTimeDiff, '-o', color='gold')
 	plt.ylim(0,1)
 	plt.ylabel('time difference between poses (s)')
-	# plt.xlim(0,600)
 
 	plt.subplot(2,1,2)
 	plt.plot(resizedPoseTime, poseRate, label='raw pose frequency' ,color='blue')
@@ -54,8 +53,6 @@ def main():
 	plt.ylabel('localization frequency (hz)')
 	plt.xlabel('utc time (s)')
 	plt.legend()
-
-	# plt.xlim(0,600)
 
 	plt.show()
 
