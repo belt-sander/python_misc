@@ -21,6 +21,7 @@ def main():
 	print("")
 
 	poseTime = inputData[:,12]
+	resizedPoseTime = poseTime[1:]
 	# print(poseTime)
 	poseTimeDiff = np.diff(poseTime)
 	# print(poseTimeDiff)
@@ -40,17 +41,21 @@ def main():
 	print("")
 
 	plt.subplot(2,1,1)
-	plt.plot(poseTimeDiff, '-o', color='gold')
-	plt.ylim(0,5)
+	plt.title('xavier localization frequency')
+	plt.plot(resizedPoseTime, poseTimeDiff, '-o', color='gold')
+	plt.ylim(0,1)
 	plt.ylabel('time difference between poses (s)')
-	plt.xlabel('number of poses')
+	# plt.xlim(0,600)
 
 	plt.subplot(2,1,2)
-	plt.plot(poseRate, color='blue')
-	plt.plot(filteredPoseRate, color='red')
-	plt.ylim(0,5)
+	plt.plot(resizedPoseTime, poseRate, label='raw pose frequency' ,color='blue')
+	plt.plot(resizedPoseTime, filteredPoseRate, label='filtered pose frequency' ,color='red')
+	plt.ylim(0,10)
 	plt.ylabel('localization frequency (hz)')
-	plt.xlabel('number of poses')
+	plt.xlabel('utc time (s)')
+	plt.legend()
+
+	# plt.xlim(0,600)
 
 	plt.show()
 
