@@ -8,6 +8,7 @@ import os
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='configure vectornav vn200 to log data')
+    
     arg_parser.add_argument('-i',
                             '--input_port', 
                             required=True, 
@@ -21,12 +22,6 @@ def parse_args():
                             '--output',
                             required=True,
                             help='output log file location')
-    arg_parser.add_argument('-n',
-                            '--nothing',
-                            action='store_true',
-                            required=False,
-                            default=False,
-                            help='no printed terminal output. only use if l33t h4ck3r.')
     arg_parser.add_argument('-a',
                             '--ascii_group',
                             required=False,
@@ -38,6 +33,12 @@ def parse_args():
                             default='10',
                             #type=int,
                             help='requested VectorNav data frequency int (default: 40) (40hz)')
+    arg_parser.add_argument('-n',
+                            '--nothing',
+                            action='store_true',
+                            required=False,
+                            default=False,
+                            help='no printed terminal output. only use if l33t h4ck3r.')
 
     return arg_parser.parse_args()
 
@@ -141,6 +142,7 @@ def main():
                 print('')
                 print('user input ended logging')
                 print('')
+                ser.flush()
                 ser.close()
                 break
 
