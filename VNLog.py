@@ -29,8 +29,8 @@ def parse_args():
     arg_parser.add_argument('-a',
                             '--ascii_group',
                             required=False,
-                            default='$VNINS',
-                            help='requested VectorNav message (default: $VNINS)')
+                            default='22',
+                            help='requested VectorNav message (default: 22)')
     arg_parser.add_argument('-f',
                             '--data_freq',
                             required=False,
@@ -40,24 +40,42 @@ def parse_args():
 
     return arg_parser.parse_args()
 
-def vn_message_type():
+def sensor_baud():
     args = parse_args()
 
-    if args.ascii_group =='$VNINS':
-        print('you r1ght bruh')
-    else:
-        print('you lame AF')
+    ### set sensor baud rate
+    sensorBaudHeader = ('$VNWRG,05,').encode()
+    baudRate = (args.baudrate).encode()
+    CRC = (',1*XX').encode()
+    newLineCarRet = ('\r \n').encode()
 
-def sensor_config():
+    return sensorBaudHeader, baudRate, CRC, newLineCarRet
+
+def sensor_data():
     args = parse_args()
+
+    ### set async data type
+    dataConfigHeader = ('$VNWRG,06,').encode()
+    dataType = (args.ascii_group).encode()
+    CRC = (',1*XX').encode()
+    newLineCarRet = ('\r \n').encode()
+
+    return dataConfigHeader, dataType, CRC, newLineCarRet
+
+def sensor_freq():
+    args = parse_args()
+    
     ### set data update rate    
-
     freqConfigHeader = ('$VNWRG,07,').encode()
     freqValue = (args.data_freq)
-    freqCRC = (',1*XX').encode()
+    CRC = (',1*XX').encode()
     newLineCarRet = ('\r \n').encode()        
-    return freqConfigHeader, freqValue, freqCRC, newLineCarRet
+    
+    dataConfigHeader = ('$VNWRG,06,').encode()
+    dataType = (args.ascii_group).encode()
 
+    return freqConfigHeader, freqValue, CRC, newLineCarRet
+    
 def main():
     args = parse_args()
 
@@ -80,17 +98,23 @@ def main():
         print "error open serial port: " + str(e)
         exit()
 
-    ### data frequency from sensor. limited to 50hz unless baudrate is changed! 
-    # freqConfigHeader = ('$VNWRG,07,').encode()
-    # freqValue = (args.data_freq)
-    # freqCRC = (',1*XX').encode()
-    # newLineCarRet = ('\r \n').encode()        
+    freqConfigHeader, freqValue, CRC, newLineCarRet = sensor_freq()
+    dataConfigHeader, dataType, CRC, newLineCarRet = sensor_data()
+    sensorBaudHeader, baudRate, CRC, newLineCarRet = sensor_baud()
     
-    freqConfigHeader, freqValue, freqCRC, newLineCarRet = sensor_config()
-
     ser.write(freqConfigHeader)
     ser.write(freqValue)
-    ser.write(freqCRC)
+    ser.write(CRC)
+    ser.write(newLineCarRet)
+
+    ser.write(dataConfigHeader)
+    ser.write(dataType)
+    ser.write(CRC)
+    ser.write(newLineCarRet)
+
+    ser.write(sensorBaudHeader)
+    ser.write(baudRate)
+    ser.write(CRC)
     ser.write(newLineCarRet)
 
     if ser.isOpen():
@@ -100,7 +124,14 @@ def main():
                 line = ser.readline() # unsure if needed -> .decode('utf-8')
                 if line:
                     if '$VNINS' in line:
-                        data = line[7:].strip() #.split(',')
+                        data = line[0:].strip() #7 is the number of chars to skip
+                        if args.print_output:
+                            print(data)
+                        else:
+                            print('data is being written to file')
+                        file.write(data+'\n')
+                    if '$VNISL' in line:
+                        data = line[0:].strip() #7 is the number of chars to skip
                         if args.print_output:
                             print(data)
                         else:
