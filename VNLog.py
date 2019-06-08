@@ -21,11 +21,12 @@ def parse_args():
                             '--output',
                             required=True,
                             help='output log file location')
-    arg_parser.add_argument('-p',
-                            '--print_output',
+    arg_parser.add_argument('-n',
+                            '--nothing',
                             action='store_true',
                             required=False,
-                            help='print terminal output from sensor')
+                            default=False,
+                            help='no printed terminal output. only use if l33t h4ck3r.')
     arg_parser.add_argument('-a',
                             '--ascii_group',
                             required=False,
@@ -117,6 +118,10 @@ def main():
     ser.write(CRC)
     ser.write(newLineCarRet)
 
+    print('')
+    print('configure complete, w00t.')
+    print('')
+
     if ser.isOpen():
         file = open(os.path.join(args.output,'vectornav_data.txt'), 'w') #w for write as opposed to append
         while True:
@@ -125,17 +130,17 @@ def main():
                 if line:
                     if '$VNINS' in line:
                         data = line[0:].strip() #7 is the number of chars to skip
-                        if args.print_output:
+                        if args.nothing == False:
                             print(data)
-                        else:
-                            print('data is being written to file')
+                        # else:
+                        #     print('data is being written to file')
                         file.write(data+'\n')
                     if '$VNISL' in line:
                         data = line[0:].strip() #7 is the number of chars to skip
-                        if args.print_output:
+                        if args.nothing == False:
                             print(data)
-                        else:
-                            print('data is being written to file')
+                        # else:
+                        #     print('data is being written to file')
                         file.write(data+'\n')
                 if line =='!':
                     ser.close()
