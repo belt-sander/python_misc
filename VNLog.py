@@ -128,20 +128,11 @@ def main():
             try:
                 line = ser.readline() # unsure if needed -> .decode('utf-8')
                 if line:
-                    if '$VNINS' in line:
-                        data = line[0:].strip() #7 is the number of chars to skip
-                        if args.nothing == False:
-                            print(data)
-                        # else:
-                        #     print('data is being written to file')
-                        file.write(data+'\n')
-                    if '$VNISL' in line:
-                        data = line[0:].strip() #7 is the number of chars to skip
-                        if args.nothing == False:
-                            print(data)
-                        # else:
-                        #     print('data is being written to file')
-                        file.write(data+'\n')
+                    # if '$VNINS' in line:
+                    data = line[0:].strip() #7 is the number of chars to skip
+                    if args.nothing == False:
+                        print(data)
+                    file.write(data+'\n')
                 if line =='!':
                     ser.close()
                     break
