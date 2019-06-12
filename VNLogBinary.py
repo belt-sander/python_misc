@@ -5,6 +5,7 @@ import time
 import csv
 import argparse
 import os
+import numpy as np
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='configure vectornav vn200 to log data')
@@ -20,13 +21,8 @@ def parse_args():
                             help='current VectorNav baud rate (default: 115200)')
     arg_parser.add_argument('-o',
                             '--output',
-                            required=True,
-                            help='output log file location')
-    arg_parser.add_argument('-a',
-                            '--ascii_group',
                             required=False,
-                            default='22',
-                            help='requested VectorNav message (default: 22)')
+                            help='output log file location')
     arg_parser.add_argument('-f',
                             '--data_freq',
                             required=False,
@@ -67,16 +63,24 @@ def sensor_baud():
 
     return sensorBaudHeader, baudRate, CRC, newLineCarRet
 
-def sensor_data():
+def sensor_data_binary():
     args = parse_args()
 
-    ### set async data type
-    dataConfigHeader = ('$VNWRG,06,').encode()
-    dataType = (args.ascii_group).encode()
+    ### set binary data type (serial port 1, 80/800 = 10hz, group 10 (attitude), group 10 number 0002 (ypr), *CRC)
+    dataConfigHeader = ('$VNWRG,75,').encode()
+    dataAsyncMode = ('1,').encode() # data sent out on serial port 1
+    dataRateDivisor = ('80,').encode() # number divided by 800 == frequency (10hz)
+    dataOutputGroup = ('10,').encode() # selected binary output group number
+    dataOutputField = ('0002').encode() # selected binary data in dataOutputGroup
     CRC = (',1*XX').encode()
+    
     newLineCarRet = ('\r \n').encode()
 
-    return dataConfigHeader, dataType, CRC, newLineCarRet
+    ### test message
+    dataAsyncDisable = ('$VNWRG,06,0,1*XX').encode()
+    dataTest = ('$VNWRG,75,1,800,01,0001*XX').encode()
+
+    return dataConfigHeader, dataAsyncMode, dataRateDivisor, dataOutputGroup, dataOutputField, CRC, newLineCarRet, dataAsyncDisable ,dataTest
 
 def sensor_freq():
     args = parse_args()
@@ -86,9 +90,6 @@ def sensor_freq():
     freqValue = (args.data_freq)
     CRC = (',1*XX').encode()
     newLineCarRet = ('\r \n').encode()        
-    
-    dataConfigHeader = ('$VNWRG,06,').encode()
-    dataType = (args.ascii_group).encode()
 
     return freqConfigHeader, freqValue, CRC, newLineCarRet
     
@@ -115,7 +116,7 @@ def main():
         exit()
 
     freqConfigHeader, freqValue, CRC, newLineCarRet = sensor_freq()
-    dataConfigHeader, dataType, CRC, newLineCarRet = sensor_data()
+    dataConfigHeader, dataAsyncMode, dataRateDivisor, dataOutputGroup, dataOutputField, CRC, newLineCarRet, dataTest, dataAsyncDisable = sensor_data_binary()
     sensorBaudHeader, baudRate, CRC, newLineCarRet = sensor_baud()
     sensorReset = sensor_reset()
     
@@ -124,26 +125,29 @@ def main():
     	print('')
     	print('sensor has been reset to factory settings!')
 
-    ser.write(dataConfigHeader)
-    ser.write(dataType)
-    ser.write(CRC)
-    ser.write(newLineCarRet)
-
-    print('')
-    print('configuring frequency and baud')
-    ser.write(freqConfigHeader)
-    ser.write(freqValue)
-    ser.write(CRC)
-    ser.write(newLineCarRet)
-
     ser.write(sensorBaudHeader)
     ser.write(baudRate)
     ser.write(CRC)
     ser.write(newLineCarRet)
 
-    print('')
-    print('done configuring frequency and baudrate')
+    # ser.write(dataConfigHeader)
+    # ser.write(dataAsyncMode)
+    # ser.write(dataRateDivisor)
+    # ser.write(dataOutputGroup)
+    # ser.write(dataOutputField)
+    # ser.write(CRC)
+    # ser.write(newLineCarRet)
 
+    # ser.write(freqConfigHeader)
+    # ser.write(freqValue)
+    # ser.write(CRC)
+    # ser.write(newLineCarRet)
+
+    ser.write(dataAsyncDisable)
+    ser.write(newLineCarRet)
+
+    ser.write(dataTest)
+    ser.write(newLineCarRet)
 
     if int(args.baudrate) != 115200:
         ser.flush()
@@ -173,8 +177,11 @@ def main():
     print('configure complete, w00t.')
     print('')
 
+    ### data type tests:
+    ### custom_dtype = np.dtype([('header', np.uint8), ('group', np.uint8), ('fields', np.uint16), ('yaw', np.float), ('pitch', np.float), ('roll', np.float), ('crc', np.uint16)]) 
+
     if ser.isOpen():
-        file = open(os.path.join(args.output,'vectornav_data.txt'), 'w') #w for write as opposed to append
+        # file = open(os.path.join(args.output,'vectornav_binary_data.txt'), 'w') #w for write as opposed to append
         while True:
             try:
                 line = ser.readline() # unsure if needed -> .decode('utf-8')
