@@ -39,8 +39,22 @@ def parse_args():
                             required=False,
                             default=False,
                             help='no printed terminal output. only use if l33t h4ck3r.')
+    arg_parser.add_argument('-R',
+    						'--FACTORY_RESET',
+    						action='store_true',
+    						required=False,
+    						default=False,
+    						help='sensor factory reset. only use this if you have no other options.')
 
     return arg_parser.parse_args()
+
+def sensor_reset():
+	args = parse_args()
+
+	### sensor reset command
+	sensorReset = ('$VNRFS*5F').encode()
+
+	return sensorReset
 
 def sensor_baud():
     args = parse_args()
@@ -103,12 +117,17 @@ def main():
     freqConfigHeader, freqValue, CRC, newLineCarRet = sensor_freq()
     dataConfigHeader, dataType, CRC, newLineCarRet = sensor_data()
     sensorBaudHeader, baudRate, CRC, newLineCarRet = sensor_baud()
+    sensorReset = sensor_reset()
     
+    if args.FACTORY_RESET == True:
+    	ser.write(sensorReset)
+    	print('')
+    	print('sensor has been reset to factory settings!')
+
     ser.write(dataConfigHeader)
     ser.write(dataType)
     ser.write(CRC)
     ser.write(newLineCarRet)
-
 
     print('')
     print('configuring frequency and baud')
@@ -124,6 +143,7 @@ def main():
 
     print('')
     print('done configuring frequency and baudrate')
+
 
     if int(args.baudrate) != 115200:
         ser.flush()
