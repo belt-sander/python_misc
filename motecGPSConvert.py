@@ -7,6 +7,7 @@ import csv
 import argparse
 import datetime
 import numpy as np
+import matplotlib.pyplot as plt
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='convert MoTeC i2 gps time / date to posix')
@@ -75,6 +76,27 @@ def main():
     print("data has been exported")
     print("")
 
+    plt.subplot(4,1,1)
+    plt.plot(gpsGenPosix, wheelSpeedRR, color='gold')
+    plt.plot(gpsGenPosix, wheelSpeedRL, color='red')
+    plt.plot(gpsGenPosix, wheelSpeedFR, color='blue')
+    plt.plot(gpsGenPosix, wheelSpeedFL, color='green')
+    plt.ylabel('wheel speed (mph)')
+
+    plt.subplot(4,1,2)
+    plt.plot(gpsGenPosix, wheelMoveState, color='red')
+    plt.ylabel('wheels moving state')
+
+    plt.subplot(4,1,3)
+    plt.plot(gpsGenPosix, steerWheelAngle, color='pink')
+    plt.ylabel('steering wheel angle (deg)')
+
+    plt.subplot(4,1,4)
+    plt.plot(gpsGenPosix, avgBrakePres, color='yellow')
+    plt.ylabel('avg brake press (unitless)')
+    plt.xlabel('time (s)')
+
+    plt.show()
 
 if __name__=='__main__':
     main()
