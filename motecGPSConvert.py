@@ -57,7 +57,16 @@ def main():
     brakePresF = inputData[:,24]
     brakePresR = inputData[:,25]
     avgBrakePres = brakePresR+brakePresF
-    
+    vnYaw = inputData[:,3]
+    vnPitch = inputData[:,4]
+    vnRoll = inputData[:,5]
+    vnAccelX = inputData[:,11]
+    vnAccelY = inputData[:,12]
+    vnAccelZ = inputData[:,13]
+    vnGyroX = inputData[:,14]
+    vnGyroY = inputData[:,15]
+    vnGyroZ = inputData[:,16]
+
     # gpsSec = inputData[:,26]
     # print("utc seconds of day:")
     # print(gpsSec)
@@ -71,27 +80,25 @@ def main():
         # print("new posix time:")
         # print(gpsGenPosix)
 
-    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres", comments='')
+    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ))
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s)", comments='')
     print("data has been exported")
     print("")
 
-    plt.subplot(4,1,1)
+    plt.subplot(3,1,1)
     plt.plot(gpsGenPosix, wheelSpeedRR, color='gold')
     plt.plot(gpsGenPosix, wheelSpeedRL, color='red')
     plt.plot(gpsGenPosix, wheelSpeedFR, color='blue')
     plt.plot(gpsGenPosix, wheelSpeedFL, color='green')
-    plt.ylabel('wheel speed (mph)')
-
-    plt.subplot(4,1,2)
     plt.plot(gpsGenPosix, wheelMoveState, color='red')
-    plt.ylabel('wheels moving state')
+    plt.ylabel('wheel speed (mph)')
+    # plt.ylabel('wheels moving state')
 
-    plt.subplot(4,1,3)
+    plt.subplot(3,1,2)
     plt.plot(gpsGenPosix, steerWheelAngle, color='pink')
     plt.ylabel('steering wheel angle (deg)')
 
-    plt.subplot(4,1,4)
+    plt.subplot(3,1,3)
     plt.plot(gpsGenPosix, avgBrakePres, color='yellow')
     plt.ylabel('avg brake press (unitless)')
     plt.xlabel('time (s)')
