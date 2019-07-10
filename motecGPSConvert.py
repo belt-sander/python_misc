@@ -81,7 +81,7 @@ def main():
         # print(gpsGenPosix)
 
     dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s)", comments='')
+    np.savetxt(args.output, dataOutput, fmt='%.5f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s)", comments='')
     print("data has been exported")
     print("")
 
@@ -90,8 +90,9 @@ def main():
     plt.plot(gpsGenPosix, wheelSpeedRL, color='red')
     plt.plot(gpsGenPosix, wheelSpeedFR, color='blue')
     plt.plot(gpsGenPosix, wheelSpeedFL, color='green')
-    plt.plot(gpsGenPosix, wheelMoveState, color='red')
+    plt.plot(gpsGenPosix, wheelMoveState, color='red', label='wheels moving state')
     plt.ylabel('wheel speed (mph)')
+    plt.legend()
     # plt.ylabel('wheels moving state')
 
     plt.subplot(3,1,2)
