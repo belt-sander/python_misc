@@ -28,6 +28,10 @@ def parse_args():
                             '--compareOutput',
                             required=True,
                             help='compare output trajectory file location')
+    arg_parser.add_argument('-corg',
+                            '--compareOutputRg',
+                            required=False,
+                            help='compare output trajectory file location')
 
     return arg_parser.parse_args()
 
@@ -51,6 +55,9 @@ def main():
     gpsTimeCompare = compare[:,0]
     gpsLatCompare = compare[:,19]
     gpsLongCompare = compare[:,20]
+    gpsRgLat = compare[:,21]
+    gpsRgLong = compare[:,22]
+
 
     dataOutputTruth = np.column_stack((gpsTimeTruth,gpsLatTruth,gpsLongTruth))
     np.savetxt(args.truthOutput, dataOutputTruth, fmt='%.9f', delimiter=',')
@@ -60,12 +67,16 @@ def main():
     np.savetxt(args.compareOutput, dataOutputCompare, fmt='%.9f', delimiter=',')
     # np.savetxt(args.compareOutput, dataOutputCompare, fmt='%.9f', delimiter=' ', header="# gps time (s), gps latitude (dd), gps longitude (dd)", comments='')
 
+    dataOutputCompareRg = np.column_stack((gpsTimeCompare,gpsRgLat,gpsRgLong))
+    np.savetxt(args.compareOutputRg, dataOutputCompareRg, fmt='%.9f', delimiter=',')
+
     print("data has been exported")
     print("")
 
     plt.subplot(1,1,1)
     plt.plot(gpsLatTruth, gpsLongTruth, color='blue', label='ground truth trajectory')
     plt.plot(gpsLatCompare, gpsLongCompare, color='red', label='compare trajectory')
+    plt.plot(gpsRgLat, gpsRgLong, color='green', label='racegrade trajectory')
     plt.title('gps trajectory compare')
     plt.legend()
 

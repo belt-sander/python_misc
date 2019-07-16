@@ -68,6 +68,8 @@ def main():
     vnGyroX = inputData[:,14]
     vnGyroY = inputData[:,15]
     vnGyroZ = inputData[:,16]
+    rgLat = inputData[:,28]
+    rgLong = inputData[:,29]
 
     print("iterating through data...")
     print("")
@@ -77,8 +79,8 @@ def main():
         # print("new posix time:")
         # print(gpsGenPosix)
 
-    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd)", comments='')
+    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong))
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd)", comments='')
     print("data has been exported")
     print("")
 
@@ -100,6 +102,9 @@ def main():
     plt.plot(gpsGenPosix, avgBrakePres, color='yellow')
     plt.ylabel('avg brake press (unitless)')
     plt.xlabel('time (s)')
+
+    plt.figure(2)
+    plt.plot(rgLat,rgLong,color='red')
 
     plt.show()
 
