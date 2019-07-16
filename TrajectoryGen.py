@@ -19,7 +19,7 @@ def parse_args():
     arg_parser.add_argument('-c',
                             '--compareTrajectory',
                             required=True,
-                            help='output from motecGPSConvert.py')
+                            help='output from MoTeCGPSTimeConvert.py')
     arg_parser.add_argument('-to',
                             '--truthOutput',
                             required=False,
