@@ -20,7 +20,7 @@ def parse_args():
                             '--date',
                             required=True,
                             type=str,
-                            help='Date (day, month, year) that data was recorded')
+                            help='Date (day, month, year) that data was recorded in format <xx-xx-xxxx>')
     arg_parser.add_argument('-o',
                             '--output',
                             required=True,
