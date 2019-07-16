@@ -85,10 +85,11 @@ def main():
     print("")
 
     plt.subplot(3,1,1)
-    plt.plot(gpsGenPosix, wheelSpeedRR, color='gold')
-    plt.plot(gpsGenPosix, wheelSpeedRL, color='red')
-    plt.plot(gpsGenPosix, wheelSpeedFR, color='blue')
-    plt.plot(gpsGenPosix, wheelSpeedFL, color='green')
+    plt.title("relevant vehicle data")
+    plt.plot(gpsGenPosix, wheelSpeedRR, color='gold', label='rr wheel')
+    plt.plot(gpsGenPosix, wheelSpeedRL, color='red', label='rl wheel')
+    plt.plot(gpsGenPosix, wheelSpeedFR, color='blue', label='fr wheel')
+    plt.plot(gpsGenPosix, wheelSpeedFL, color='green', label='fl wheel')
     plt.plot(gpsGenPosix, wheelMoveState, color='red', label='wheels moving state')
     plt.ylabel('wheel speed (mph)')
     plt.legend()
@@ -101,10 +102,14 @@ def main():
     plt.subplot(3,1,3)
     plt.plot(gpsGenPosix, avgBrakePres, color='yellow')
     plt.ylabel('avg brake press (unitless)')
-    plt.xlabel('time (s)')
+    plt.xlabel('utc time (s)')
 
     plt.figure(2)
+    plt.title("vectornav / racegrade compare")
     plt.plot(rgLat,rgLong,color='red')
+    plt.plot(gpsLat,gpsLong,color='green')
+    plt.ylabel("longitude (dd)")
+    plt.xlabel("latitude (dd)")
 
     plt.show()
 
