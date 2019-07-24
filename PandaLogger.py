@@ -29,6 +29,15 @@ def can_logger():
 	except AssertionError:
 		print("USB connection failed.")
 
+		try:
+			p = Panda("WIFI")
+		except:
+			print("WiFi connection timed out. Please make sure your Panda is connected and try again.")
+			sys.exit(0)
+
+	# p.set_can_speed_kbps(0,500)	
+	# p.set_safety_mode(Panda.SAFETY_ALLOUTPUT) # remove data output safety filter
+
 	try:
    		outputfile = open(args.outputFileArg, 'wb')
    		csvwriter = csv.writer(outputfile)
@@ -39,10 +48,15 @@ def can_logger():
 		bus1_msg_cnt = 0
 		bus2_msg_cnt = 0
 
+
 		while True:
+			
 			can_recv = p.can_recv()
+			print("in while loop")
+			print(can_recv)
 
     		for address, _, dat, src  in can_recv:
+    			print("in for loop")
         		csvwriter.writerow([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
 
 		    	if src == 0:
