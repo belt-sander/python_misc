@@ -62,6 +62,9 @@ def main():
     vnYaw = inputData[:,3]
     vnPitch = inputData[:,4]
     vnRoll = inputData[:,5]
+    vnVelX = inputData[:,6]
+    vnVelY = inputData[:,7]
+    vnVelZ = inputData[:,8]
     vnAccelX = inputData[:,11]
     vnAccelY = inputData[:,12]
     vnAccelZ = inputData[:,13]
@@ -79,8 +82,8 @@ def main():
         # print("new posix time:")
         # print(gpsGenPosix)
 
-    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd)", comments='')
+    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong, vnVelX, vnVelY, vnVelZ))
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s)", comments='')
     print("data has been exported")
     print("")
 
@@ -110,6 +113,15 @@ def main():
     plt.plot(gpsLat,gpsLong,color='green')
     plt.ylabel("longitude (dd)")
     plt.xlabel("latitude (dd)")
+
+    plt.figure(3)
+    plt.title("vectornav global vel")
+    plt.plot(gpsGenPosix, vnVelX, color='red', label='north vel (m/s)')
+    plt.plot(gpsGenPosix, vnVelY, color='blue', label='east vel (m/s)')
+    plt.plot(gpsGenPosix, vnVelZ, color='green', label='down vel (m/s)')
+    plt.xlabel('utc time (s)')
+    plt.ylabel('vel (m/s)')
+    plt.legend()
 
     plt.show()
 
