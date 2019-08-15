@@ -1,4 +1,4 @@
-ƒ#!/usr/bin/env python
+#!/usr/bin/env python
 
 # can logger using comma panda
 
@@ -11,13 +11,17 @@ import sys
 from panda import Panda
 
 def parse_args():
-    arg_parser = argparse.ArgumentParser(description='log can data using comma.ai panda and export to txt')
+	arg_parser = argparse.ArgumentParser(description='log can data using comma.ai panda and export to txt')
 
-    arg_parser.add_argument('-o',
-                            '--outputFileArg', 
-                            required=True, 
-                            help='txt file output path')
-    return arg_parser.parse_args()
+	arg_parser.add_argument('-o',
+                          '--outputFileArg', 
+                          required=True, 
+                          help='txt file output path')
+	arg_parser.add_argument('-t',
+													'--testMode',
+													required=True,
+													help='set to <True> if ack is required')
+	return arg_parser.parse_args()
 
 def can_logger():
 	args = parse_args()
@@ -35,42 +39,52 @@ def can_logger():
 			print("WiFi connection timed out. Please make sure your Panda is connected and try again.")
 			sys.exit(0)
 
+	if args.testMode == "True":
+		p.set_safety_mode(p.SAFETY_ALLOUTPUT)
+	elif args.testMode == "False":
+		p.set_safety_mode(p.SAFETY_NOOUTPUT)
+	else:
+		print("incorrect testMode arguement...")
+
+	# set bus speeds
 	# p.set_can_speed_kbps(0,500)	
-	# p.set_safety_mode(Panda.SAFETY_ALLOUTPUT) # remove data output safety filter
+	# p.set_can_speed_kbps(1,500)
+	# p.set_can_speed_kbps(2,500)
 
 	try:
-   		outputfile = open(args.outputFileArg, 'wb')
-   		csvwriter = csv.writer(outputfile)
-   		csvwriter.writerow(['Bus', 'MessageID', 'Message', 'MessageLength'])
-   		print("Writing csv file output.csv. Press Ctrl-C to exit...\n")
-
+		outputfile = open(args.outputFileArg, 'wb')
+		csvwriter = csv.writer(outputfile)
+		csvwriter.writerow(['Bus', 'MessageID', 'Message', 'MessageLength'])
+		print("Writing csv file to specified file in args. Press Ctrl-C to exit...\n")
+		
 		bus0_msg_cnt = 0
 		bus1_msg_cnt = 0
 		bus2_msg_cnt = 0
 
-
 		while True:
-			
 			can_recv = p.can_recv()
-			print("in while loop")
-			print(can_recv)
 
-    		for address, _, dat, src  in can_recv:
-    			print("in for loop")
-        		csvwriter.writerow([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
+			for address, _, dat, src  in can_recv:
 
-		    	if src == 0:
-		        	bus0_msg_cnt += 1
-		    	elif src == 1:
-		       		bus1_msg_cnt += 1
-		    	elif src == 2:
-		        	bus2_msg_cnt += 1
+				# address filtering ...
+				# if address == 1638 or address == 1639:
 
-    			print("Message Counts... Bus 0: " + str(bus0_msg_cnt) + " Bus 1: " + str(bus1_msg_cnt) + " Bus 2: " + str(bus2_msg_cnt), end='\r')
+				csvwriter.writerow([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
+				print([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
+
+				if src == 0:
+					bus0_msg_cnt += 1
+				elif src == 1:
+					bus1_msg_cnt += 1
+				elif src == 2:
+					bus2_msg_cnt += 1
 
 	except KeyboardInterrupt:
+		# turn off output mode
+		p.set_safety_mode(p.SAFETY_NOOUTPUT)
+
 		print("\nNow exiting. Final message Counts... Bus 0: " + str(bus0_msg_cnt) + " Bus 1: " + str(bus1_msg_cnt) + " Bus 2: " + str(bus2_msg_cnt))
 		outputfile.close()
-
+			
 if __name__ == "__main__":
 		can_logger()
