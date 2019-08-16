@@ -21,41 +21,47 @@ def parse_args():
 													'--testMode',
 													required=True,
 													help='set to <True> if ack is required')
+	arg_parser.add_argument('-m',
+													'--mask',
+													required=False,
+													help='set to only log / display data from a particular identifier e.g. <0x666>')
 	return arg_parser.parse_args()
 
 def can_logger():
 	args = parse_args()
+	# translate user input from mask arg to dec
+	argId = (args.mask, 16)
 
 	try:
 		print("Trying to connect to Panda over USB...")
 		p = Panda()
-
 	except AssertionError:
 		print("USB connection failed.")
-
 		try:
 			p = Panda("WIFI")
 		except:
 			print("WiFi connection timed out. Please make sure your Panda is connected and try again.")
 			sys.exit(0)
 
+	# turn off safety mode
 	if args.testMode == "True":
 		p.set_safety_mode(p.SAFETY_ALLOUTPUT)
 	elif args.testMode == "False":
 		p.set_safety_mode(p.SAFETY_NOOUTPUT)
 	else:
-		print("incorrect testMode arguement...")
+		print("incorrect testMode arguement")
+		sys.exit("exiting...")
 
-	# set bus speeds
-	# p.set_can_speed_kbps(0,500)	
-	# p.set_can_speed_kbps(1,500)
-	# p.set_can_speed_kbps(2,500)
+	# set bus speeds. nominally 500kbps
+	# p.set_can_speed_kbps(0,1000)	
+	# p.set_can_speed_kbps(1,1000)
+	# p.set_can_speed_kbps(2,1000)
 
 	try:
 		outputfile = open(args.outputFileArg, 'wb')
 		csvwriter = csv.writer(outputfile)
 		csvwriter.writerow(['Bus', 'MessageID', 'Message', 'MessageLength'])
-		print("Writing csv file to specified file in args. Press Ctrl-C to exit...\n")
+		print("Writing csv file to", args.outputFileArg, "Press Ctrl-C to exit...\n")
 		
 		bus0_msg_cnt = 0
 		bus1_msg_cnt = 0
@@ -65,19 +71,29 @@ def can_logger():
 			can_recv = p.can_recv()
 
 			for address, _, dat, src  in can_recv:
+				if args.mask is None:
+					csvwriter.writerow([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
+					print([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
 
-				# address filtering ...
-				# if address == 1638 or address == 1639:
+					if src == 0:
+						bus0_msg_cnt += 1
+					elif src == 1:
+						bus1_msg_cnt += 1
+					elif src == 2:
+						bus2_msg_cnt += 1
 
-				csvwriter.writerow([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
-				print([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
+				if args.mask is not None:
+					# address filtering ...
+					if address == argId:
+						csvwriter.writerow([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
+						print([str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])
 
-				if src == 0:
-					bus0_msg_cnt += 1
-				elif src == 1:
-					bus1_msg_cnt += 1
-				elif src == 2:
-					bus2_msg_cnt += 1
+						if src == 0:
+							bus0_msg_cnt += 1
+						elif src == 1:
+							bus1_msg_cnt += 1
+						elif src == 2:
+							bus2_msg_cnt += 1
 
 	except KeyboardInterrupt:
 		# turn off output mode
