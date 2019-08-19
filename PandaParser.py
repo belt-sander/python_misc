@@ -1,11 +1,15 @@
 #!/usr/bin/python
 
+### this tool allows playback of data in a terminal and physically output to can via comma panda
+### currently limited to physical playback of one ID at a time
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import binascii
 import time
 from panda import Panda
+import struct
 
 def parse_args():
 	arg_parser = argparse.ArgumentParser(description='PandaLogger.py data parser')
@@ -17,10 +21,15 @@ def parse_args():
 							'--testMode',
 							required=True,
 							help='set to <True> if ack is required')	
-	arg_parser.add_argument('-o',
-							'--textOutput',
+	arg_parser.add_argument('-m',
+							'--mask',
 							required=False,
-							help='print data in terminal')
+							help='play back data only on this identifier <decimal>')
+	arg_parser.add_argument('-s',
+							'--sleep',
+							required=True,
+							type=float,
+							help='sleep time (ms) between playing messages back')
 
 	return arg_parser.parse_args()
 
@@ -58,6 +67,9 @@ def main():
 	numCanPackets = np.size(canData,0)
 	print("num can samples: ", numCanPackets)
 
+	print("args mask", (args.mask))
+	maskint = int(args.mask, 0)
+
 	# busNum = canData[:,0]
 	# messIden = canData[:,1]
 	# data = canData[:,2]
@@ -72,101 +84,18 @@ def main():
 		messIdenInt = int(messIden,0)
 		busNumInt = int(busNum,0)
 		lengthInt = int(length,0)
-		
-		if lengthInt == 8:
-			byte0 = ((int(data,0) & 0xff00000000000000) >> 56)
-			byte0hex = hex(byte0).rstrip("L")
-			byte1 = ((int(data,0) & 0x00ff000000000000) >> 48)
-			byte1hex = hex(byte1).rstrip("L")
-			byte2 = ((int(data,0) & 0x0000ff0000000000) >> 40)
-			byte2hex = hex(byte2).rstrip("L")
-			byte3 = ((int(data,0) & 0x000000ff00000000) >> 32)
-			byte3hex = hex(byte3).rstrip("L")
-			byte4 = ((int(data,0) & 0x00000000ff000000) >> 24)
-			byte4hex = hex(byte4).rstrip("L")
-			byte5 = ((int(data,0) & 0x0000000000ff0000) >> 16)
-			byte5hex = hex(byte5).rstrip("L")
-			byte6 = ((int(data,0) & 0x000000000000ff00) >> 8)
-			byte6hex = hex(byte6).rstrip("L")
-			byte7 = (int(data,0) & 0x00000000000000ff)
-			byte7hex = hex(byte7).rstrip("L")
-			assy = '\\' + str(byte0hex)[1:] + '\\' + byte1hex[1:] + '\\' + byte2hex[1:] + '\\' + byte3hex[1:] + '\\' + byte4hex[1:] + '\\' + byte5hex[1:] + '\\' + byte6hex[1:] + '\\' + byte7hex[1:]
-			print(assy)
-			# p.can_send(messIdenInt, assy, busNumInt)
+		dataInt = int(data,0)
 
-		elif lengthInt == 7:
-			byte0 = ((int(data,0) & 0xff000000000000) >> 48)
-			byte0hex = hex(byte0)
-			byte1 = ((int(data,0) & 0x00ff0000000000) >> 40)
-			byte1hex = hex(byte1)
-			byte2 = ((int(data,0) & 0x0000ff00000000) >> 36)
-			byte2hex = hex(byte2)
-			byte3 = ((int(data,0) & 0x000000ff000000) >> 24)
-			byte3hex = hex(byte3)
-			byte4 = ((int(data,0) & 0x00000000ff0000) >> 16)
-			byte4hex = hex(byte4)
-			byte5 = ((int(data,0) & 0x0000000000ff00) >> 8)
-			byte5hex = hex(byte5)
-			byte6 = (int(data,0) & 0x000000000000ff)
-			byte6hex = hex(byte6)
+		if messIdenInt == maskint:
+			dataStructOut = struct.pack('>Q',dataInt)
+			p.can_send(messIdenInt,dataStructOut,busNumInt)
+			print([(busNumInt), (messIdenInt), (data), (lengthInt)])
+			time.sleep(args.sleep)
+		elif args.mask is None:
+			print([(busNumInt), (messIdenInt), (data), (lengthInt)])
+			time.sleep(args.sleep)
 
-		elif lengthInt == 6:
-			byte0 = ((int(data,0) & 0xff0000000000) >> 40)
-			byte0hex = hex(byte0)
-			byte1 = ((int(data,0) & 0x00ff00000000) >> 32)
-			byte1hex = hex(byte1)
-			byte2 = ((int(data,0) & 0x0000ff000000) >> 24)
-			byte2hex = hex(byte2)
-			byte3 = ((int(data,0) & 0x000000ff0000) >> 16)
-			byte3hex = hex(byte3)
-			byte4 = ((int(data,0) & 0x00000000ff00) >> 8)
-			byte4hex = hex(byte4)
-			byte5 = (int(data,0) & 0x0000000000ff)
-			byte5hex = hex(byte5)
 
-		elif lengthInt == 5:
-			byte0 = ((int(data,0) & 0xff00000000) >> 32)
-			byte0hex = hex(byte0)
-			byte1 = ((int(data,0) & 0x00ff000000) >> 24)
-			byte1hex = hex(byte1)
-			byte2 = ((int(data,0) & 0x0000ff0000) >> 16)
-			byte2hex = hex(byte2)
-			byte3 = ((int(data,0) & 0x000000ff00) >> 8)
-			byte3hex = hex(byte3)
-			byte4 = (int(data,0) & 0x00000000ff)
-			byte4hex = hex(byte4)
-
-		elif lengthInt == 4:
-			byte0 = ((int(data,0) & 0xff000000) >> 24)
-			byte0hex = hex(byte0)
-			byte1 = ((int(data,0) & 0x00ff0000) >> 16)
-			byte1hex = hex(byte1)
-			byte2 = ((int(data,0) & 0x0000ff00) >> 8)
-			byte2hex = hex(byte2)
-			byte3 = (int(data,0) & 0x000000ff)
-			byte3hex = hex(byte3)
-
-		elif lengthInt == 3:
-			byte0 = ((int(data,0) & 0xff0000) >> 16)
-			byte0hex = hex(byte0)
-			byte1 = ((int(data,0) & 0x00ff00) >> 8)
-			byte1hex = hex(byte1)
-			byte2 = (int(data,0) & 0x0000ff)
-			byte2hex = hex(byte2)
-
-		elif lengthInt == 2:
-			byte0 = ((int(data,0) & 0xff00) >> 8)
-			byte0hex = hex(byte0)
-			byte1 = (int(data,0) & 0x00ff)
-			byte1hex = hex(byte1)
-
-		elif lengthInt == 1:
-			byte0 = (int(data,0) & 0xff)
-			byte0hex = hex(byte0)
-
-		# print([(busNumInt), (messIdenInt), (data), (lengthInt)])
-
-		time.sleep(0.01)
 
 if __name__=='__main__':
 	main()
