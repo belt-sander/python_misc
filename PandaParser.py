@@ -50,7 +50,7 @@ def main():
 			sys.exit(0)
 
 		# turn off CAN tx safety mode
-		if args.testMode == '	True':
+		if args.testMode == 'True':
 			p.set_safety_mode(p.SAFETY_ALLOUTPUT)
 		elif args.testMode == 'False':
 			p.set_safety_mode(p.SAFETY_NOOUTPUT)
@@ -80,12 +80,12 @@ def main():
 		dataInt = int(data,0)
 
 		if args.replay == 'True':	
-			if messIdenInt == maskint:
-				dataStructOut = struct.pack('>Q',dataInt) # '>Q' argument == big endian long struct format
-				p.can_send(messIdenInt,dataStructOut,busNumInt)
+			if maskint == 0x800:
 				print([(busNumInt), (messIden), (data), (lengthInt)])
 				time.sleep(args.sleep)
-			elif args.mask is None:
+			elif messIdenInt == maskint:
+				dataStructOut = struct.pack('>Q',dataInt) # '>Q' argument == big endian long struct format
+				p.can_send(messIdenInt,dataStructOut,busNumInt)
 				print([(busNumInt), (messIden), (data), (lengthInt)])
 				time.sleep(args.sleep)
 		
