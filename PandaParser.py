@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 ### this tool allows playback of data in a terminal and physically output to can via comma panda
 ### currently limited to physical playback of one ID at a time
