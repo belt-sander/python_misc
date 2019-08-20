@@ -25,6 +25,10 @@ def parse_args():
 							'--mask',
 							required=False,
 							help='play back data only on this identifier <decimal>')
+	arg_parser.add_argument('-m2',
+							'--mask2',
+							required=False,
+							help='play back data only on this identifier <decimal>')
 	arg_parser.add_argument('-s',
 							'--sleep',
 							required=True,
@@ -70,6 +74,9 @@ def main():
 	print("args mask", (args.mask))
 	maskint = int(args.mask, 0)
 
+	print("args mask 2", (args.mask2))
+	maskint2 = int(args.mask2, 0)
+
 	# busNum = canData[:,0]
 	# messIden = canData[:,1]
 	# data = canData[:,2]
@@ -91,6 +98,12 @@ def main():
 			p.can_send(messIdenInt,dataStructOut,busNumInt)
 			print([(busNumInt), (messIdenInt), (data), (lengthInt)])
 			time.sleep(args.sleep)
+		elif messIdenInt == maskint2:
+			dataStructOut = struct.pack('>I',dataInt)
+			p.can_send(messIdenInt,dataStructOut,busNumInt)
+			print([(busNumInt), (messIdenInt), (data), (lengthInt)])
+			time.sleep(args.sleep)
+
 		elif args.mask is None:
 			print([(busNumInt), (messIdenInt), (data), (lengthInt)])
 			time.sleep(args.sleep)
