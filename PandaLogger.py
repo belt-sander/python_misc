@@ -48,7 +48,7 @@ def can_logger():
 		p.set_safety_mode(p.SAFETY_ALLOUTPUT)
 	elif args.testMode == "False":
 		p.set_safety_mode(p.SAFETY_NOOUTPUT)
-	else:
+	elif:
 		print("incorrect testMode arguement")
 		sys.exit("exiting...")
 
