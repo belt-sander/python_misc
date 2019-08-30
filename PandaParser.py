@@ -100,13 +100,17 @@ def main():
 			elif messIdenInt == maskint:
 				dataStructOut = struct.pack('>Q',dataInt) # '>Q' argument == big endian 8 byte unsigned // '>I' argument == big endian 4 byte unsigned
 				# print([(busNumInt), (messIden), (data), (lengthInt)])
-				
+
+				if messIden == '0x155': # wheel speed id
+					b5 = '0x'+(data[:16])[12:] # motec byte offset 5, 16 bit
+					wheelSpeed = int(b5,0)*(0.00999999978)
+					print([(busNumInt), (messIden), (data), (lengthInt), ('wheel speed: ', "{:10.4f}".format(wheelSpeed))])
+
+
 				###
 				# data manipulation (2 byte chunks)
 				###
-				data2byteOut = struct.unpack(b'4H',dataStructOut)
-				print('wh spd? : ', data2byteOut[2])
-				
+
 				###
 				# crc test // CORRECT FOR 0x488 ((byte0 + byte1 + byte2 + id + len)%256)
 				# crc test // CORRECT FOR 0x370 ((byte0 + byte1 + byte2 + byte3 + byte4 + byte5 + byte6 + id + len + -5)%256)
