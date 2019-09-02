@@ -3,6 +3,7 @@
 ### this tool allows playback of data in a terminal and physically output to can via comma panda
 ### currently limited to physical playback of one ID at a time
 
+from __future__ import print_function
 import argparse
 import numpy as np
 import time
@@ -41,6 +42,7 @@ def parse_args():
 def main():
 	args = parse_args()
 
+	# connect to panda if relay is active
 	if args.replay == 'True':
 		try:
 			print("Trying to connect to Panda over USB...")
@@ -56,7 +58,7 @@ def main():
 			p.set_safety_mode(p.SAFETY_NOOUTPUT)
 		else:
 			print("incorrect testMode arguement")
-			sys.exit("exiting...")
+			sys.exit("exiting...")	
 
 	canData = np.genfromtxt(args.input, skip_header=1, delimiter=',', dtype=str	)
 	print("data has been imported")
@@ -91,10 +93,11 @@ def main():
 				# print([(busNumInt), (messIden), (data), (lengthInt)])								
 				time.sleep(args.sleep)
 		
+		### terminal playback / debugging ###
 		elif args.replay == 'False':
 			if maskint == 0x800:
 				dataStructOut = struct.pack('>Q',dataInt) # '>Q' argument == big endian long struct format
-				print([(busNumInt), (messIden), (data), (lengthInt)])
+				print([(busNumInt), (messIden), (data), (lengthInt)])			
 				time.sleep(args.sleep)
 
 			elif messIdenInt == maskint:
@@ -104,32 +107,51 @@ def main():
 				if messIden == '0x155': # wheel speed id
 					b5 = '0x'+(data[:16])[12:] # motec byte offset 5, 16 bit
 					wheelSpeed = int(b5,0)*(0.00999999978)
-					print([(busNumInt), (messIden), (data), (lengthInt), ('wheel speed: ', "{:10.4f}".format(wheelSpeed))])
+					print([(busNumInt), (messIden), (data), (lengthInt)])	
 
-
-				###
-				# data manipulation (2 byte chunks)
-				###
-
-				###
 				# crc test // CORRECT FOR 0x488 ((byte0 + byte1 + byte2 + id + len)%256)
+				elif messIden == '0x488': # ap lateral command id
+					mysteryFactor = 0
+					dataSum = mysteryFactor + messIdenInt + lengthInt + ord(dataStructOut[0]) + ord(dataStructOut[1]) + ord(dataStructOut[2]) + ord(dataStructOut[3]) + ord(dataStructOut[4]) + ord(dataStructOut[5]) + ord(dataStructOut[6])
+					crc = dataSum%256
+					print('crc is correct!', [(busNumInt), (messIden), (data), (lengthInt)])
+	
+					if crc != ord(dataStructOut[7]):
+						print('wrong crc y0!!!!')
+						print('sum: ', dataSum)
+						print('this is calculated crc: ', crc, 'this is the last byte: ', ord(dataStructOut[7]))
+						print('error: ', crc - ord(dataStructOut[7]))
+						print([(busNumInt), (messIden), (data), (lengthInt)])				
+
 				# crc test // CORRECT FOR 0x370 ((byte0 + byte1 + byte2 + byte3 + byte4 + byte5 + byte6 + id + len + -5)%256)
+				elif messIden == '0x370': # ap lateral command id
+					mysteryFactor = -5
+					dataSum = mysteryFactor + messIdenInt + lengthInt + ord(dataStructOut[0]) + ord(dataStructOut[1]) + ord(dataStructOut[2]) + ord(dataStructOut[3]) + ord(dataStructOut[4]) + ord(dataStructOut[5]) + ord(dataStructOut[6])
+					crc = dataSum%256
+			
+					if crc != ord(dataStructOut[7]):
+						print('wrong crc y0!!!!')
+						print('sum: ', dataSum)
+						print('this is calculated crc: ', crc, 'this is the last byte: ', ord(dataStructOut[7]))
+						print('error: ', crc - ord(dataStructOut[7]))
+						print([(busNumInt), (messIden), (data), (lengthInt)])
+
 				# crc test // CORRECT FOR 0x175 ((byte0 + byte1 + byte2 + byte3 + byte4 + byte5 + byte6 + id + len + -7)%256)
-				###
+				elif messIden == '0x175': # ap lateral command id
+					mysteryFactor = -7
+					dataSum = mysteryFactor + messIdenInt + lengthInt + ord(dataStructOut[0]) + ord(dataStructOut[1]) + ord(dataStructOut[2]) + ord(dataStructOut[3]) + ord(dataStructOut[4]) + ord(dataStructOut[5]) + ord(dataStructOut[6])
+					crc = dataSum%256
+			
+					if crc != ord(dataStructOut[7]):
+						print('wrong crc y0!!!!')
+						print('sum: ', dataSum)
+						print('this is calculated crc: ', crc, 'this is the last byte: ', ord(dataStructOut[7]))
+						print('error: ', crc - ord(dataStructOut[7]))
+						print([(busNumInt), (messIden), (data), (lengthInt)])				
 
-				# mysteryFactor = -5
-				# dataSum = mysteryFactor + messIdenInt + lengthInt + ord(dataStructOut[0]) + ord(dataStructOut[1]) + ord(dataStructOut[2]) + ord(dataStructOut[3]) + ord(dataStructOut[4]) + ord(dataStructOut[5]) + ord(dataStructOut[6])
-				# crc = dataSum%256
-				# if crc != ord(dataStructOut[7]):
-				# 	print('wrong crc y0!!!!')
-				# 	print('sum: ', dataSum)
-				# 	print('this is calculated crc: ', crc, 'this is the last byte: ', ord(dataStructOut[7]))
-				# 	print('error: ', crc - ord(dataStructOut[7]))
-				# 	print([(busNumInt), (messIden), (data), (lengthInt)])
+			time.sleep(args.sleep)				
 
-				time.sleep(args.sleep)				
-
-	# re-enable safety mode
+	# re-enable safety mode when playback is complete
 	if args.replay == 'True':
 		p.set_safety_mode(p.SAFETY_NOOUTPUT)
 		print('panda saftey mode re-enabled')
