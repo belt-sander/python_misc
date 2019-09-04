@@ -4,7 +4,7 @@
 
 from panda import Panda
 import argparse
-import sys
+import sys, traceback
 import time
 import binascii
 
@@ -40,21 +40,50 @@ def main():
 		sys.exit("exiting...")
 
 	print('ready for data...')
-	newMess = False;
+	p.can_clear(0xffff)
+	print('can ringbuffer cleared')
+
+	### can forwarder settings ###
+	# p.set_can_forwarding(0,1)
+	# p.set_can_forwarding(1,0)
+	# print('forwarder enabled 0->1 1->0')
+
+	### data format below ###
+	# ('input data: ', [(1638, 59728, bytearray(b'\xff\xff\x00\x00\x00\x00\x00\x00'), 0)])
+	# ('converted output: ', ['0', '0x666', '0xffff000000000000', 8])
+	# ('addr: ', 1638)
+	# ('dat: ', '\xff\xff\x00\x00\x00\x00\x00\x00')
+
+	count = 0
+	newSend = False
+	newSendData2 = False
 
 	while True:
 		inputData = p.can_recv()
 		for address, _, dat, src  in inputData:
-			if address is not None:
+			if src == 0 and address == 0x666:
+				newSend = True				
+				if newSend == True:
+					print('input data: ', inputData)
+					print('converted output: ', [str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])		
+					print('addr: ', address)
+					print('dat: ', str(dat))
+					print('send state: ', newSend)					
+					count = count + 1
+					print('counter: ', count)
+					p.can_send(address, str(dat),1)
 
-				print('converted output: ', [str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])		
-				print('addr: ', address)
-				print('dat: ', str(dat))
-				newMess = True
-				
-				if newMess == True:
-					p.can_send(0x555,'sander',1)	
-					newMess == False	
+			if src == 0 and address == 0x034:
+				newSendData2 = True
+				if newSendData2 == True:
+					print('input data: ', inputData)
+					print('converted output: ', [str(src), str(hex(address)), "0x" + binascii.hexlify(dat), len(dat)])		
+					print('addr: ', address)
+					print('dat: ', str(dat))
+					print('send state: ', newSendData2)					
+					count = count + 1
+					print('counter: ', count)
+					p.can_send(address, str(dat),1)					
 
 if __name__ == "__main__":
 		main()
