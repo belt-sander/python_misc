@@ -149,7 +149,7 @@ def main():
 						print('error: ', crc - ord(dataStructOut[7]))
 						print([(busNumInt), (messIden), (data), (lengthInt)])				
 
-			time.sleep(args.sleep)				
+				time.sleep(args.sleep)				
 
 	# re-enable safety mode when playback is complete
 	if args.replay == 'True':
