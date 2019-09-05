@@ -101,6 +101,8 @@ def main():
 	message8byte = np.zeros((len(canData),1)) # experiment value for plotting				
 	vehSpd = np.zeros((len(canData),1)) # reference for plots
 
+	userMess1 = np.zeros((len(canData),1)) # reference for plots
+
 	# show current mask called at terminal
 	if args.mask is not None:
 		print("args mask", (args.mask))
@@ -210,7 +212,8 @@ def main():
 					message5byte[i:] = (int('0x'+data[:12][10:],0)&0xff)
 					message6byte[i:] = (int('0x'+data[:14][12:],0)&0xff)										
 					message7byte[i:] = (int('0x'+data[:16][14:],0)&0xff)										
-					message8byte[i:] = (int('0x'+data[:18][16:],0)&0xff)															
+					message8byte[i:] = (int('0x'+data[:18][16:],0)&0xff)	
+					userMess1[i:] = (int('0x'+data[:8][2:],0)&0xffffff)														
 				elif lengthInt == 6:
 					message1[i:] = (int('0x'+data[:6][2:],0)&0xffff)
 					message2[i:] = (int('0x'+data[:10][6:],0)&0xffff)
@@ -275,15 +278,23 @@ def main():
 		fig3.suptitle('8 bit values (graph 2)')
 		ax11.plot(vehSpd, color='red', label='vehicle speed (0x155)')
 		ax11.legend()
-		ax12.plot(message5byte, label='byte 0')
+		ax12.plot(message5byte, label='byte 4')
 		ax12.legend()
-		ax13.plot(message6byte, label='byte 1')
+		ax13.plot(message6byte, label='byte 5')
 		ax13.legend()
-		ax14.plot(message7byte, label='byte 2')
+		ax14.plot(message7byte, label='byte 6')
 		ax14.legend()
-		ax15.plot(message8byte, label='byte 3')
+		ax15.plot(message8byte, label='byte 7')
 		ax15.set_xlabel('samples')
 		ax15.legend()	
+
+		fig4, (ax16, ax17) = plt.subplots(2,1, sharex=True)
+		fig4.suptitle('user value guesses')
+		ax16.plot(vehSpd, color='green', label='vehicle speed (0x155)')
+		ax16.legend()
+		ax17.plot(userMess1, label='user message guess')
+		ax17.legend()
+		ax17.set_xlabel('samples')
 
 		plt.show()
 
