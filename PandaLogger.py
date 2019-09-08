@@ -30,7 +30,7 @@ def parse_args():
 def can_logger():
 	args = parse_args()
 	# translate user input from mask arg to dec
-	# argId = int(args.mask, 16)
+	argId = int(args.mask, 0)
 
 	try:
 		print("Trying to connect to Panda over USB...")

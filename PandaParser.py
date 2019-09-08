@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import time
 from panda import Panda
+from bitstring import BitArray as ba 
 import struct
 import sys
 import matplotlib.pyplot as plt
@@ -85,23 +86,32 @@ def main():
 	print("num can samples: ", numCanPackets)
 
 	# set up data aggregator value
+	vehSpd = np.zeros((len(canData),1)) # reference for plots
+	apState = np.zeros((len(canData),1)) # reference for plots 
+	accelPedal = np.zeros((len(canData),1)) # reference for plots
+	steerAng = np.zeros((len(canData),1)) # reference for plots
+	bkR = np.zeros((len(canData),1)) # reference for plots
+	bkF = np.zeros((len(canData),1)) # reference for plots
+
 	dataGraph = np.zeros((len(canData),1))
 	idGraph = np.zeros((len(canData),1))
 	message1 = np.zeros((len(canData),1)) # experiment value for plotting
 	message2 = np.zeros((len(canData),1)) # experiment value for plotting
 	message3 = np.zeros((len(canData),1)) # experiment value for plotting
 	message4 = np.zeros((len(canData),1)) # experiment value for plotting
+	message0byte = np.zeros((len(canData),1)) # experiment value for plotting
 	message1byte = np.zeros((len(canData),1)) # experiment value for plotting
 	message2byte = np.zeros((len(canData),1)) # experiment value for plotting
 	message3byte = np.zeros((len(canData),1)) # experiment value for plotting
 	message4byte = np.zeros((len(canData),1)) # experiment value for plotting
 	message5byte = np.zeros((len(canData),1)) # experiment value for plotting
 	message6byte = np.zeros((len(canData),1)) # experiment value for plotting
-	message7byte = np.zeros((len(canData),1)) # experiment value for plotting
-	message8byte = np.zeros((len(canData),1)) # experiment value for plotting				
-	vehSpd = np.zeros((len(canData),1)) # reference for plots
-
+	message7byte = np.zeros((len(canData),1)) # experiment value for plotting				
 	userMess1 = np.zeros((len(canData),1)) # reference for plots
+	userMess2 = np.zeros((len(canData),1)) # reference for plots
+	userMess3 = np.zeros((len(canData),1)) # reference for plots
+	userMess4 = np.zeros((len(canData),1)) # reference for plots	
+	userMess5 = np.zeros((len(canData),1)) # reference for plots
 
 	# show current mask called at terminal
 	if args.mask is not None:
@@ -129,7 +139,7 @@ def main():
 				time.sleep(args.sleep) # sleep
 
 			elif messIdenInt == maskint:
-				dataStructOut = struct.pack('>Q',dataInt) # '>Q' argument == big endian long struct format
+				dataStructOut = struct.pack('>I',dataInt) # '>Q' argument == big endian long struct format
 				p.can_send(messIdenInt,dataStructOut,args.playbackBus)
 				# print([(busNumInt), (messIden), (data), (lengthInt)])								
 				time.sleep(args.sleep) # sleep
@@ -144,7 +154,8 @@ def main():
 
 			elif messIdenInt == maskint:
 				dataStructOut = struct.pack('>Q',dataInt) # '>Q' argument == big endian 8 byte unsigned // '>I' argument == big endian 4 byte unsigned
-				# print([(busNumInt), (messIden), (data), (lengthInt)])
+				if args.grapher == False: 
+					print([(busNumInt), (messIden), (data), (lengthInt)])
 
 				if messIden == '0x155': # wheel speed id
 					b5 = '0x'+(data[:16])[12:] # motec byte offset 5, 16 bit
@@ -195,61 +206,120 @@ def main():
 			### vehicle speed reference channel ###
 			if messIden == '0x155':
 				vehSpd[i:] = (int(('0x'+data[:16][12:]),0)&0xffff)*0.00999999978
+			if messIden == '0x488':
+				apState[i:] = (int(('0x'+data[:8][6:]),0)&0xC0)
+			if messIden == '0x108':
+				accelPedal[i:] = (((int(('0x'+data[:16][14:]),0))*2)/5)
+			if messIden == '0x3':
+				steerAng[i:] = (((int('0x'+data[:6][2:],0)&0x3FFF)/2)-2048)
+			if messIden == '0x185':
+				bkF[i:] = (int(('0x'+data[:8][2:]),0)&0xffffff)
+				bkR[i:] = (int(('0x'+data[:14][8:]),0)&0xffffff)
 
 			### data aggregators for plotting later
 			if messIdenInt == maskint:
 				dataGraph[i:] = dataInt
 				idGraph[i:] = messIdenInt
 				if lengthInt == 8:	
-					message1[i:] = (int('0x'+data[:6][2:],0)&0xffff)
-					message2[i:] = (int('0x'+data[:10][6:],0)&0xffff)
-					message3[i:] = (int('0x'+data[:14][10:],0)&0xffff)
-					message4[i:] = (int('0x'+data[:18][14:],0)&0xffff)				
-					message1byte[i:] = (int('0x'+data[:4][2:],0)&0xff)						
-					message2byte[i:] = (int('0x'+data[:6][4:],0)&0xff)
-					message3byte[i:] = (int('0x'+data[:8][6:],0)&0xff)
-					message4byte[i:] = (int('0x'+data[:10][8:],0)&0xff)
-					message5byte[i:] = (int('0x'+data[:12][10:],0)&0xff)
-					message6byte[i:] = (int('0x'+data[:14][12:],0)&0xff)										
-					message7byte[i:] = (int('0x'+data[:16][14:],0)&0xff)										
-					message8byte[i:] = (int('0x'+data[:18][16:],0)&0xff)	
-					userMess1[i:] = (int('0x'+data[:8][2:],0)&0xffffff)														
+					message1[i:] = ba('0x'+data[:6][2:]).uint 
+					message2[i:] = ba('0x'+data[:10][6:]).uint 
+					message3[i:] = ba('0x'+data[:14][10:]).uint 
+					message4[i:] = ba('0x'+data[:18][14:]).uint
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+					message2byte[i:] = ba('0x'+data[:8][6:]).uint
+					message3byte[i:] = ba('0x'+data[:10][8:]).uint
+					message4byte[i:] = ba('0x'+data[:12][10:]).uint
+					message5byte[i:] = ba('0x'+data[:14][12:]).uint										
+					message6byte[i:] = ba('0x'+data[:16][14:]).uint										
+					message7byte[i:] = ba('0x'+data[:18][16:]).uint	
+
+					### user messages for experimentation ###	
+					# userMess1[i:] = (int(('0x'+data[:8][2:]),0)&0xffff)>>0
+					# userMess2[i:] = (int(('0x'+data[:14][8:]),0)&0xffffff)>>0
+					# userMess3[i:] = (int(('0x'+data[:8][2:]),0)&0x000000)>>0
+					# userMess4[i:] = (int(('0x'+data[:8][2:]),0)&0x000000)>>0
+					# userMess5[i:] = (int(('0x'+data[:8][2:]),0)&0x000000)>>0
+
+				elif lengthInt == 7:
+					message1[i:] = ba('0x'+data[:6][2:]).uint
+					message2[i:] = ba('0x'+data[:10][6:]).uint
+					message3[i:] = ba('0x'+data[:14][10:]).uint					
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+					message2byte[i:] = ba('0x'+data[:8][6:]).uint
+					message3byte[i:] = ba('0x'+data[:10][8:]).uint
+					message4byte[i:] = ba('0x'+data[:12][10:]).uint
+					message5byte[i:] = ba('0x'+data[:14][12:]).uint										
+					message6byte[i:] = ba('0x'+data[:16][14:]).uint						
+				
 				elif lengthInt == 6:
-					message1[i:] = (int('0x'+data[:6][2:],0)&0xffff)
-					message2[i:] = (int('0x'+data[:10][6:],0)&0xffff)
-					message3[i:] = (int('0x'+data[:14][10:],0)&0xffff)					
-					message1byte[i:] = (int('0x'+data[:4][2:],0)&0xff)						
-					message2byte[i:] = (int('0x'+data[:6][4:],0)&0xff)
-					message3byte[i:] = (int('0x'+data[:8][6:],0)&0xff)
-					message4byte[i:] = (int('0x'+data[:10][8:],0)&0xff)
-					message5byte[i:] = (int('0x'+data[:12][10:],0)&0xff)
-					message6byte[i:] = (int('0x'+data[:14][12:],0)&0xff)										
+					message1[i:] = ba('0x'+data[:6][2:]).uint
+					message2[i:] = ba('0x'+data[:10][6:]).uint
+					message3[i:] = ba('0x'+data[:14][10:]).uint					
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+					message2byte[i:] = ba('0x'+data[:8][6:]).uint
+					message3byte[i:] = ba('0x'+data[:10][8:]).uint
+					message4byte[i:] = ba('0x'+data[:12][10:]).uint
+					message5byte[i:] = ba('0x'+data[:14][12:]).uint		
+
+				elif lengthInt == 5:
+					message1[i:] = ba('0x'+data[:6][2:]).uint
+					message2[i:] = ba('0x'+data[:10][6:]).uint
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+					message2byte[i:] = ba('0x'+data[:8][6:]).uint
+					message3byte[i:] = ba('0x'+data[:10][8:]).uint
+					message4byte[i:] = ba('0x'+data[:12][10:]).uint
+
 				elif lengthInt == 4:
-					message1[i:] = (int('0x'+data[:6][2:],0)&0xffff)
-					message2[i:] = (int('0x'+data[:10][6:],0)&0xffff)
-					message1byte[i:] = (int('0x'+data[:4][2:],0)&0xff)						
-					message2byte[i:] = (int('0x'+data[:6][4:],0)&0xff)
-					message3byte[i:] = (int('0x'+data[:8][6:],0)&0xff)
-					message4byte[i:] = (int('0x'+data[:10][8:],0)&0xff)
+					message1[i:] = ba('0x'+data[:6][2:]).uint
+					message2[i:] = ba('0x'+data[:10][6:]).uint
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+					message2byte[i:] = ba('0x'+data[:8][6:]).uint
+					message3byte[i:] = ba('0x'+data[:10][8:]).uint
+					userMess1[i:] = (int('0x'+(data[:10][8:])+(data[:8][6:]),0))
+
+				elif lengthInt == 3:
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+					message2byte[i:] = ba('0x'+data[:8][6:]).uint					
+
+				elif lengthInt == 2:
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+					message1byte[i:] = ba('0x'+data[:6][4:]).uint
+
+				elif lengthInt == 1:
+					message0byte[i:] = ba('0x'+data[:4][2:]).uint						
+
 				else:
 					print('you need to finish writing yer c0de bruh...')
 					sys.exit(0)
 
 	### show plots ###	
 	if args.grapher == 'True':		
+		print('')
+		print('data length of masked ID: ', lengthInt)
 		print('')		
 		print('data after for loop: ', dataGraph, '\n')	
 		print('data array size: ', np.size(dataGraph), '\n')		
-		print('id after for loop: ', idGraph, '\n')
-		print('id array size:', np.size(idGraph), '\n')
-		print('message1 :', message1, '\n')
-		print('message1 size: ', np.size(message1), '\n')
+		print('id after for loop: ', userMess1, '\n')
+		print('id array size:', np.size(userMess1), '\n')
 		print('')
 
-		fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5,1, sharex=True)
+		fig, (ax1, steer1, bk1, ax2, ax3, ax4, ax5) = plt.subplots(7,1, sharex=True)
 		fig.suptitle('16 bit values (big endian)')
-		ax1.plot(vehSpd, color='red', label='vehicle speed (0x155)')
+		ax1.plot(vehSpd, color='orange', label='vehicle speed (0x155)')
+		ax1.plot(apState, color='magenta', label='ap state')
+		ax1.plot(accelPedal, color='pink', label='pedal pos')
 		ax1.legend()
+		steer1.plot(steerAng, color='green', label='steer angle')		
+		steer1.legend()
+		bk1.plot(bkF, color='red', label='brake press F')
+		bk1.plot(bkR, color='gold', label='brake press R')
+		bk1.legend()
 		ax2.plot(message1, label='2 byte / message1')
 		ax2.legend()
 		ax3.plot(message2, label='2 byte / message2')
@@ -260,41 +330,70 @@ def main():
 		ax5.set_xlabel('samples')
 		ax5.legend()
 
-		fig2, (ax6, ax7, ax8, ax9, ax10) = plt.subplots(5,1, sharex=True)
+		fig2, (ax6, steer2, bk2, ax7, ax8, ax9, ax10) = plt.subplots(7,1, sharex=True)
 		fig2.suptitle('8 bit values (graph 1)')
-		ax6.plot(vehSpd, color='red', label='vehicle speed (0x155)')
+		ax6.plot(vehSpd, color='gold', label='vehicle speed (0x155)')
+		ax6.plot(apState, color='magenta', label='ap state')
+		ax6.plot(accelPedal, color='pink', label='pedal pos')
 		ax6.legend()
-		ax7.plot(message1byte, label='byte 0')
+		steer2.plot(steerAng, color='green', label='steer angle')		
+		steer2.legend()
+		bk2.plot(bkF, color='red', label='brake press F')
+		bk2.plot(bkR, color='gold', label='brake press R')
+		bk2.legend()		
+		ax7.plot(message0byte, label='byte 0')
 		ax7.legend()
-		ax8.plot(message2byte, label='byte 1')
+		ax8.plot(message1byte, label='byte 1')
 		ax8.legend()
-		ax9.plot(message3byte, label='byte 2')
+		ax9.plot(message2byte, label='byte 2')
 		ax9.legend()
-		ax10.plot(message4byte, label='byte 3')
+		ax10.plot(message3byte, label='byte 3')
 		ax10.set_xlabel('samples')
 		ax10.legend()	
 
-		fig3, (ax11, ax12, ax13, ax14, ax15) = plt.subplots(5,1, sharex=True)
+		fig3, (ax11, steer3, bk3, ax12, ax13, ax14, ax15) = plt.subplots(7,1, sharex=True)
 		fig3.suptitle('8 bit values (graph 2)')
 		ax11.plot(vehSpd, color='red', label='vehicle speed (0x155)')
+		ax11.plot(apState, color='magenta', label='ap state')
+		ax11.plot(accelPedal, color='pink', label='pedal pos')
 		ax11.legend()
-		ax12.plot(message5byte, label='byte 4')
+		steer3.plot(steerAng, color='green', label='steer angle')		
+		steer3.legend()
+		bk3.plot(bkF, color='red', label='brake press F')
+		bk3.plot(bkR, color='gold', label='brake press R')
+		bk3.legend()		
+		ax12.plot(message4byte, label='byte 4')
 		ax12.legend()
-		ax13.plot(message6byte, label='byte 5')
+		ax13.plot(message5byte, label='byte 5')
 		ax13.legend()
-		ax14.plot(message7byte, label='byte 6')
+		ax14.plot(message6byte, label='byte 6')
 		ax14.legend()
-		ax15.plot(message8byte, label='byte 7')
+		ax15.plot(message7byte, label='byte 7')
 		ax15.set_xlabel('samples')
 		ax15.legend()	
 
-		fig4, (ax16, ax17) = plt.subplots(2,1, sharex=True)
+		fig4, (ax16, steer4, bk4, ax17, ax18, ax19, ax20, ax21) = plt.subplots(8,1, sharex=True)
 		fig4.suptitle('user value guesses')
 		ax16.plot(vehSpd, color='green', label='vehicle speed (0x155)')
+		ax16.plot(apState, color='magenta', label='ap state')
+		ax16.plot(accelPedal, color='pink', label='pedal pos')
 		ax16.legend()
-		ax17.plot(userMess1, label='user message guess')
+		steer4.plot(steerAng, color='green', label='steer angle')		
+		steer4.legend()
+		bk4.plot(bkF, color='red', label='brake press F')
+		bk4.plot(bkR, color='gold', label='brake press R')
+		bk4.legend()		
+		ax17.plot(userMess1, label='user message guess 1')
 		ax17.legend()
-		ax17.set_xlabel('samples')
+		ax18.plot(userMess2, label='user message guess 2')
+		ax18.legend()
+		ax19.plot(userMess3, label='user message guess 3')
+		ax19.legend()
+		ax20.plot(userMess4, label='user message guess 4')
+		ax20.legend()
+		ax21.plot(userMess5, label='user message guess 5')
+		ax21.legend()
+		ax21.set_xlabel('samples')
 
 		plt.show()
 
