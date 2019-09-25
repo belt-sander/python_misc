@@ -53,10 +53,10 @@ def main():
     gpsLatTruth = truth[:,1]
     gpsLongTruth = truth[:,2]
     gpsTimeCompare = compare[:,0]
-    gpsLatCompare = compare[:,19]
-    gpsLongCompare = compare[:,20]
-    gpsRgLat = compare[:,21]
-    gpsRgLong = compare[:,22]
+    gpsLatCompare = compare[:,21]
+    gpsLongCompare = compare[:,22]
+    gpsRgLat = compare[:,23]
+    gpsRgLong = compare[:,24]
 
     if args.truthOutput is not None:
         dataOutputTruth = np.column_stack((gpsTimeTruth,gpsLatTruth,gpsLongTruth))
