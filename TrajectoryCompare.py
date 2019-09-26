@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
@@ -40,6 +41,7 @@ def main():
     
     print("")
     print("converting truth lla to UTM...")
+    print("")
     gpsNorthingCompare = np.zeros((len(compare),1))
     gpsEastingCompare = np.zeros((len(compare),1))
     gpsNorthingTruth = np.zeros((len(truth),1))
@@ -52,7 +54,7 @@ def main():
         # print("truth utm:", utmNTruth, utmETruth)
         gpsNorthingTruth[aa,: ] = utmNTruth
         gpsEastingTruth[aa,: ] = utmETruth 
-    
+
     for bb, row in enumerate(compare):
         gpsLatCompare = row[1]
         gpsLongCompare = row[2]
@@ -60,6 +62,20 @@ def main():
         # print("compare utm:", utmNCompare, utmECompare)
         gpsNorthingCompare[bb,: ] = utmNCompare
         gpsEastingCompare[bb,: ] = utmECompare
+
+    # distance traveled equations
+    print("truth northing array size: ", np.size(gpsNorthingTruth))
+    init_truth_pose_n = gpsNorthingTruth[0]
+    print("first truth northing pose: ", init_truth_pose_n)
+    last_truth_pose_n = gpsNorthingTruth[(np.size(gpsNorthingTruth)-1)]
+    print("last truth northing pose: ", last_truth_pose_n)
+    init_truth_pose_e = gpsEastingTruth[0]
+    print("first truth easting pose: ", init_truth_pose_e)
+    last_truth_pose_e = gpsEastingTruth[(np.size(gpsEastingTruth)-1)]
+    print("last truth easting pose: ", last_truth_pose_e)
+    print("")
+    distance_between_start_finish = np.sqrt(((init_truth_pose_e - last_truth_pose_e)**2) + ((init_truth_pose_n - last_truth_pose_n)**2))
+    print("distance between start and finish: ", distance_between_start_finish,"meters")
 
     gpsNorthingTruthArr = np.resize(gpsNorthingTruth,np.size(gpsNorthingTruth))
     gpsEastingTruthArr = np.resize(gpsEastingTruth,np.size(gpsEastingTruth))
@@ -79,14 +95,14 @@ def main():
     interpEastingCompare = np.interp(gpsTimeTruth,gpsTimeCompare,gpsEastingCompareArr)
     interpNorthingCompare = np.interp(gpsTimeTruth,gpsTimeCompare,gpsNorthingCompareArr)
 
-    print("interp'd easting",interpEastingCompare)
-    print("")
-    print("interp array size", np.size(interpEastingCompare,0))
-    print("")
-    print("interp'd northing",interpNorthingCompare)
-    print("")
-    print("interp array size", np.size(interpNorthingCompare,0))
-    print("")
+    # print("interp'd easting",interpEastingCompare)
+    # print("")
+    # print("interp array size", np.size(interpEastingCompare,0))
+    # print("")
+    # print("interp'd northing",interpNorthingCompare)
+    # print("")
+    # print("interp array size", np.size(interpNorthingCompare,0))
+    # print("")
 
     errorEasting = interpEastingCompare - gpsEastingTruthArr
     errorNorthing = interpNorthingCompare - gpsNorthingTruthArr 
@@ -125,7 +141,7 @@ def main():
     plt.xlabel("meters of error (m)")
     plt.legend()
 
-    plt.show()
+    # plt.show()
 
 if __name__=='__main__':
     main()
