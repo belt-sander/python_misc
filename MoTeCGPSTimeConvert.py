@@ -47,47 +47,48 @@ def main():
 
     gpsGenPosix = np.zeros((len(inputData),1))
     sysTime = inputData[:,0]
-    gpsTimeTest = inputData[:,77]
-    gpsLat = inputData[:,19]
-    gpsLong = inputData[:,20]
-    avgSpd = inputData[:,1]
+    gpsTimeTest = inputData[:,63]
+    gpsLat = inputData[:,74]
+    gpsLong = inputData[:,75]
+    avgSpd = inputData[:,2]
     brakeState = inputData[:,7]
-    wheelSpeedFL = inputData[:,56]
-    wheelSpeedFR = inputData[:,57]
-    wheelSpeedRL = inputData[:,58]
-    wheelSpeedRR = inputData[:,59]
-    steerWheelAngle = inputData[:,62]
-    wheelMoveState = inputData[:,66]
-    brakePresF = inputData[:,67]
-    brakePresR = inputData[:,68]
+    wheelSpeedFL = inputData[:,46]
+    wheelSpeedFR = inputData[:,47]
+    wheelSpeedRL = inputData[:,48]
+    wheelSpeedRR = inputData[:,49]
+    steerWheelAngle = inputData[:,54]
+    wheelMoveState = inputData[:,55]
+    brakePresF = inputData[:,56]
+    brakePresR = inputData[:,57]
     avgBrakePres = brakePresR+brakePresF
-    vnYaw = inputData[:,13]
-    vnPitch = inputData[:,14]
-    vnRoll = inputData[:,15]
-    vnVelX = inputData[:,16]
-    vnVelY = inputData[:,17]
-    vnVelZ = inputData[:,18]
-    vnAccelX = inputData[:,21]
-    vnAccelY = inputData[:,22]
-    vnAccelZ = inputData[:,23]
-    vnGyroX = inputData[:,24]
-    vnGyroY = inputData[:,25]
-    vnGyroZ = inputData[:,26]
-    rgLat = inputData[:,85]
-    rgLong = inputData[:,86]
-    wheelOdoRR = inputData[:,91]
-    speedOBDResponse = inputData[:,49]
+    vnYaw = inputData[:,8]
+    vnPitch = inputData[:,9]
+    vnRoll = inputData[:,10]
+    vnVelX = inputData[:,11]
+    vnVelY = inputData[:,12]
+    vnVelZ = inputData[:,13]
+    vnAccelX = inputData[:,16]
+    vnAccelY = inputData[:,17]
+    vnAccelZ = inputData[:,18]
+    vnGyroX = inputData[:,19]
+    vnGyroY = inputData[:,20]
+    vnGyroZ = inputData[:,21]
+    rgLat = inputData[:,14]
+    rgLong = inputData[:,15]
+    wheelOdoRL = inputData[:,80]
+    wheelOdoRR = inputData[:,81]
+    # speedOBDResponse = inputData[:,49]
 
     print("iterating through data...")
     print("")
     for i, row in enumerate(inputData):
-        gpsSec = row[77]
+        gpsSec = row[63]
         gpsGenPosix[i,: ] = gpsSec + timeOffset
         # print("new posix time:")
         # print(gpsGenPosix)
 
-    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelOdoRR,speedOBDResponse, wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong, vnVelX, vnVelY, vnVelZ))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelodometeryRR(mph),speedOBDResponse(mph),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s)", comments='')
+    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelOdoRR,wheelOdoRL,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong, vnVelX, vnVelY, vnVelZ))
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelodometeryRR(mph),wheelodometeryRL(mph),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s)", comments='')
     print("data has been exported")
     print("")
 
@@ -101,7 +102,8 @@ def main():
     # plt.plot(gpsGenPosix, wheelMoveState, color='red', label='wheels moving state')
     plt.plot(gpsGenPosix, wheelSpeedFR, color='blue', label='fr wheel (CAN)')
     plt.plot(gpsGenPosix, wheelOdoRR, color='magenta', label='rr direct (Encoder)')
-    plt.plot(gpsGenPosix, speedOBDResponse, color='cyan', label='obd speed response (OBD)')
+    plt.plot(gpsGenPosix, wheelOdoRL, color='brown', label='rl direct (Encoder)')
+    # plt.plot(gpsGenPosix, speedOBDResponse, color='cyan', label='obd speed response (OBD)')
     plt.ylabel('wheel speed (mph)')
     plt.xlabel('utc time (s)')
     plt.legend()

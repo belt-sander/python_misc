@@ -141,7 +141,7 @@ def main():
     plt.xlabel("meters of error (m)")
     plt.legend()
 
-    # plt.show()
+    plt.show()
 
 if __name__=='__main__':
     main()
