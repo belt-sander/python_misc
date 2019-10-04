@@ -48,6 +48,7 @@ def main():
     gpsGenPosix = np.zeros((len(inputData),1))
     sysTime = inputData[:,0]
     gpsTimeTest = inputData[:,63]
+    engineSpd = inputData[:,4]
     gpsLat = inputData[:,74]
     gpsLong = inputData[:,75]
     avgSpd = inputData[:,2]
@@ -77,7 +78,21 @@ def main():
     rgLong = inputData[:,15]
     wheelOdoRL = inputData[:,80]
     wheelOdoRR = inputData[:,81]
+    novYaw = inputData[:,100]
+    novEastVel = inputData[:,102]
+    novNorthVel = inputData[:,104]
+    novUpVel = inputData[:,106]
     # speedOBDResponse = inputData[:,49]
+
+    ### rotation test ###
+    vnRelVelX = np.zeros((len(inputData),1))
+    vnRelVelY = np.zeros((len(inputData),1))
+    novRelVelY = np.zeros((len(inputData),1))
+    novRelVelX = np.zeros((len(inputData),1))    
+    vnSpd = np.zeros((len(inputData),1))
+    vnPitch = inputData[:, 9]#*(180/np.pi)
+    vnRoll = inputData[:, 10]#*(180/np.pi)
+    vnYaw = inputData[:, 8]#*(180/np.pi)    
 
     print("iterating through data...")
     print("")
@@ -86,37 +101,50 @@ def main():
         gpsGenPosix[i,: ] = gpsSec + timeOffset
         # print("new posix time:")
         # print(gpsGenPosix)
+        forVnYaw =  row[8]*(np.pi/180)
+        forNovYaw = row[100]*(np.pi/180)
+        forVnVelX = row[11]
+        forVnVelY = row[12]
+        forVnVelZ = row[13]
+        forNovEastVel = row[102]
+        forNovNorthVel = row[104]
+        forNovUpVel = row[106]
+        vnRelVelX[i,:] = (np.sin(forVnYaw)*forVnVelY + np.cos(forVnYaw)*forVnVelX)
+        vnRelVelY[i,:] = (np.cos(forVnYaw)*forVnVelY + (-np.sin(forVnYaw)*forVnVelX))
+        novRelVelY[i,:] = (np.sin(forNovYaw)*forNovEastVel + np.cos(forNovYaw)*forNovNorthVel)
+        novRelVelX[i,:] = (np.cos(forNovYaw)*forNovEastVel + (-np.sin(forNovYaw)*forNovNorthVel))
+        vnSpd[i,:] = np.sqrt((forVnVelX**2)+(forVnVelY**2)+(forVnVelZ**2))        
 
     dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelOdoRR,wheelOdoRL,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong, vnVelX, vnVelY, vnVelZ))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelodometeryRR(mph),wheelodometeryRL(mph),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(rad/s),vnGyroY(rad/s),vnGyroZ(rad/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s)", comments='')
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelodometeryRR(mph),wheelodometeryRL(mph),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s)", comments='')
     print("data has been exported")
     print("")
 
 
-    # plt.subplot(3,1,1)
     plt.title("relevant vehicle data")
     plt.figure(1)
+
+    ### can wheel speeds and move states
     # plt.plot(gpsGenPosix, wheelSpeedRR, color='gold', label='rr wheel')
     # plt.plot(gpsGenPosix, wheelSpeedRL, color='red', label='rl wheel')
-    # plt.plot(gpsGenPosix, wheelSpeedFL, color='green', label='fl wheel')
     # plt.plot(gpsGenPosix, wheelMoveState, color='red', label='wheels moving state')
-    plt.plot(gpsGenPosix, wheelSpeedFR, color='blue', label='fr wheel (CAN)')
-    plt.plot(gpsGenPosix, wheelOdoRR, color='magenta', label='rr direct (Encoder)')
-    plt.plot(gpsGenPosix, wheelOdoRL, color='brown', label='rl direct (Encoder)')
+
+    plt.plot(gpsGenPosix, wheelSpeedFL, '-o', color='green', label='fl wheel (CAN)')
+    plt.plot(gpsGenPosix, wheelSpeedFR, '-o', color='blue', label='fr wheel (CAN)')
+    plt.plot(gpsGenPosix, wheelOdoRR, '-o', color='magenta', label='rr direct (Encoder)')
+    plt.plot(gpsGenPosix, wheelOdoRL, '-o', color='brown', label='rl direct (Encoder)')
+
+    ### experiments
+    plt.plot(gpsGenPosix, vnRelVelY, color='red', label='vn rel Y (lateral vel)')
+    plt.plot(gpsGenPosix, vnRelVelX, color='orange', label='vn rel X (forward vel)')
+    plt.plot(gpsGenPosix, novRelVelY, label='novatel rel Y (forward vel)')
+    plt.plot(gpsGenPosix, novRelVelX, label='novatel rel X (lateral vel)')
+    plt.plot(gpsGenPosix, vnSpd, color='black', label='vn spd calcd')
     # plt.plot(gpsGenPosix, speedOBDResponse, color='cyan', label='obd speed response (OBD)')
+    
     plt.ylabel('wheel speed (mph)')
-    plt.xlabel('utc time (s)')
     plt.legend()
-    # plt.ylabel('wheels moving state')
-
-    # plt.subplot(3,1,2)
-    # plt.plot(gpsGenPosix, steerWheelAngle, color='pink')
-    # plt.ylabel('steering wheel angle (deg)')
-
-    # plt.subplot(3,1,3)
-    # plt.plot(gpsGenPosix, avgBrakePres, color='yellow')
-    # plt.ylabel('avg brake press (unitless)')
-    # plt.xlabel('utc time (s)')
+    plt.xlabel('utc time (s)')
 
     plt.figure(2)
     plt.title("vectornav / racegrade compare")
@@ -126,12 +154,27 @@ def main():
     plt.xlabel("latitude (dd)")
 
     plt.figure(3)
-    plt.title("vectornav global vel")
+    plt.subplot(311)
+    plt.title("global velocity")
     plt.plot(gpsGenPosix, vnVelX, color='red', label='north vel (m/s)')
     plt.plot(gpsGenPosix, vnVelY, color='blue', label='east vel (m/s)')
     plt.plot(gpsGenPosix, vnVelZ, color='green', label='down vel (m/s)')
-    plt.xlabel('utc time (s)')
+    plt.plot(gpsGenPosix, novEastVel, label='novatel east vel (m/s)')
+    plt.plot(gpsGenPosix, novNorthVel, label='novatel north vel (m/s)')
     plt.ylabel('vel (m/s)')
+    plt.legend()
+
+    plt.subplot(312)
+    plt.plot(gpsGenPosix, vnYaw, label='yaw (deg)')
+    plt.plot(gpsGenPosix, vnPitch, label='pitch (deg)')
+    plt.plot(gpsGenPosix, vnRoll, label='roll (deg)')
+    plt.legend()
+
+    plt.subplot(313)
+    plt.plot(gpsGenPosix, vnGyroZ, label='gyro Z (deg/sec)')
+    # plt.plot(gpsGenPosix, vnGyroY, '-o', label='gyro Y (deg/sec)')
+    # plt.plot(gpsGenPosix, vnGyroX, '-o', label='gyro X (deg/sec)')     
+    plt.xlabel('utc time (s)')
     plt.legend()
 
     plt.show()
