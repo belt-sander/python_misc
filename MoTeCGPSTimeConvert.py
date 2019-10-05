@@ -90,19 +90,21 @@ def main():
     novRelVelY = np.zeros((len(inputData),1))
     novRelVelX = np.zeros((len(inputData),1))    
     vnSpd = np.zeros((len(inputData),1))
+    novSpd = np.zeros((len(inputData),1))
     vnPitch = inputData[:, 9]#*(180/np.pi)
     vnRoll = inputData[:, 10]#*(180/np.pi)
     vnYaw = inputData[:, 8]#*(180/np.pi)    
 
     print("iterating through data...")
     print("")
+
     for i, row in enumerate(inputData):
         gpsSec = row[63]
         gpsGenPosix[i,: ] = gpsSec + timeOffset
         # print("new posix time:")
         # print(gpsGenPosix)
         forVnYaw =  row[8]*(np.pi/180)
-        forNovYaw = row[100]*(np.pi/180)
+        forNovYaw = (row[100]-2.5)*(np.pi/180) ### added value to try and calibrate out lateral velocity error
         forVnVelX = row[11]
         forVnVelY = row[12]
         forVnVelZ = row[13]
@@ -113,41 +115,43 @@ def main():
         vnRelVelY[i,:] = (np.cos(forVnYaw)*forVnVelY + (-np.sin(forVnYaw)*forVnVelX))
         novRelVelY[i,:] = (np.sin(forNovYaw)*forNovEastVel + np.cos(forNovYaw)*forNovNorthVel)
         novRelVelX[i,:] = (np.cos(forNovYaw)*forNovEastVel + (-np.sin(forNovYaw)*forNovNorthVel))
-        vnSpd[i,:] = np.sqrt((forVnVelX**2)+(forVnVelY**2)+(forVnVelZ**2))        
+        vnSpd[i,:] = np.sqrt((forVnVelX**2)+(forVnVelY**2)+(forVnVelZ**2))
+        novSpd[i,:] = np.sqrt((forNovNorthVel**2)+(forNovEastVel**2)+(forNovUpVel**2))
 
-    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelOdoRR,wheelOdoRL,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong, vnVelX, vnVelY, vnVelZ))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelodometeryRR(mph),wheelodometeryRL(mph),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s)", comments='')
+    dataOutput = np.column_stack((gpsGenPosix,avgSpd,brakeState,wheelOdoRR,wheelOdoRL,wheelSpeedFL,wheelSpeedFR,wheelSpeedRL,wheelSpeedRR,steerWheelAngle,wheelMoveState,avgBrakePres,vnYaw,vnPitch,vnRoll,vnAccelX,vnAccelY,vnAccelZ,vnGyroX,vnGyroY,vnGyroZ,gpsLat,gpsLong,rgLat,rgLong, vnVelX, vnVelY, vnVelZ, novEastVel, novNorthVel, novUpVel))
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),avgSpd(mph),brakeState(unitless),wheelodometeryRR(mph),wheelodometeryRL(mph),wheelSpeedFL(mph),wheelSpeedFR(mph),wheelSpeedRL(mph),wheelSpeedRR(mph),steerWheelAngle(deg),wheelMoveState(unitless),avgBrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s),gps lat(dd), gps long(dd), rg lat(dd), rg long(dd), vnVelX(mph), vnVelY(mph), vnVelZ(mph), novEastVel(mph), novNorthVel(mph), novUpVel(mph)", comments='')
     print("data has been exported")
     print("")
 
-
-    plt.title("relevant vehicle data")
     plt.figure(1)
+    plt.title("velocity / speed data")
 
     ### can wheel speeds and move states
     # plt.plot(gpsGenPosix, wheelSpeedRR, color='gold', label='rr wheel')
     # plt.plot(gpsGenPosix, wheelSpeedRL, color='red', label='rl wheel')
     # plt.plot(gpsGenPosix, wheelMoveState, color='red', label='wheels moving state')
-
     plt.plot(gpsGenPosix, wheelSpeedFL, '-o', color='green', label='fl wheel (CAN)')
     plt.plot(gpsGenPosix, wheelSpeedFR, '-o', color='blue', label='fr wheel (CAN)')
+
+    ### wheel odo
     plt.plot(gpsGenPosix, wheelOdoRR, '-o', color='magenta', label='rr direct (Encoder)')
     plt.plot(gpsGenPosix, wheelOdoRL, '-o', color='brown', label='rl direct (Encoder)')
 
     ### experiments
     plt.plot(gpsGenPosix, vnRelVelY, color='red', label='vn rel Y (lateral vel)')
     plt.plot(gpsGenPosix, vnRelVelX, color='orange', label='vn rel X (forward vel)')
-    plt.plot(gpsGenPosix, novRelVelY, label='novatel rel Y (forward vel)')
+    plt.plot(gpsGenPosix, novRelVelY, '-o', label='novatel rel Y (forward vel)')
     plt.plot(gpsGenPosix, novRelVelX, label='novatel rel X (lateral vel)')
-    plt.plot(gpsGenPosix, vnSpd, color='black', label='vn spd calcd')
+    plt.plot(gpsGenPosix, vnSpd, color='black', label='vn speed mag')
+    plt.plot(gpsGenPosix, novSpd, label='novatel speed mag')
     # plt.plot(gpsGenPosix, speedOBDResponse, color='cyan', label='obd speed response (OBD)')
-    
     plt.ylabel('wheel speed (mph)')
     plt.legend()
     plt.xlabel('utc time (s)')
 
     plt.figure(2)
     plt.title("vectornav / racegrade compare")
+
     plt.plot(rgLat,rgLong,color='red')
     plt.plot(gpsLat,gpsLong,color='green')
     plt.ylabel("longitude (dd)")
