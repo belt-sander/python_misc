@@ -51,7 +51,7 @@ def main():
 		converted_gyro_y[i,: ] = (gyroY / 32768) * 2000
 		converted_gyro_z[i,: ] = (gyroZ / 32768) * 2000				
 
-	dataOutput = np.column_stack((converted_gyro_x, converted_gyro_y, converted_gyro_z, converted_accel_x, converted_accel_y, converted_accel_z))
+	dataOutput = np.column_stack((gpsTime, converted_gyro_x, converted_gyro_y, converted_gyro_z, converted_accel_x, converted_accel_y, converted_accel_z))
 	np.savetxt(args.output_file, dataOutput, fmt='%.8f', delimiter=' ', header="# utcTime, gyro X, gyro Y, gyro Z, accel X, accel Y, accel Z", comments='')
 	print("data has been exported")
 	print("")
