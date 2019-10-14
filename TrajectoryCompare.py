@@ -23,7 +23,7 @@ def parse_args():
 def main():
     args = parse_args()
     truth = np.genfromtxt(args.truthTrajectory, delimiter=',')
-    compare = np.genfromtxt(args.compareTrajectory, delimiter=',')    
+    compare = np.genfromtxt(args.compareTrajectory, delimiter=',', skip_header=10) # skipped header for gpsData.csv format from pcb-tools
     print("")
     print("data imported.")
     
@@ -110,7 +110,6 @@ def main():
     errorNorthingFilter = savgol_filter(errorNorthing,9999,3)
 
     plt.figure(1)
-    plt.subplot(211)
     plt.title("trajectory comparison")
     # plt.plot(gpsTimeTruth, errorEasting, color='red', label='easting error')
     # plt.plot(gpsTimeTruth, errorNorthing, color='blue', label='northing error')
@@ -118,14 +117,6 @@ def main():
     plt.plot(gpsTimeTruth, errorNorthingFilter, color='green', label='northing filtered error')
     plt.ylabel("meters of error (m)")
     plt.xlabel("utc (s)")
-    # plt.ylim(-5,5)
-    plt.legend()
-
-    plt.subplot(212)
-    plt.plot(gpsEastingTruthArr, gpsNorthingTruthArr, color='green', label='novatel (truth)')
-    plt.plot(gpsEastingCompareArr, gpsNorthingCompareArr, color='red', label='compare (questionable)')
-    plt.ylabel("utm northing (m)")
-    plt.xlabel("utm easting (m)")
     plt.legend()
 
     plt.figure(2)
@@ -139,6 +130,13 @@ def main():
     plt.hist(errorNorthing, np.linspace(-10,10,200), color='red', label='northing error')
     plt.ylabel("samples")
     plt.xlabel("meters of error (m)")
+    plt.legend()
+
+    plt.figure(3)
+    plt.plot(gpsEastingTruthArr, gpsNorthingTruthArr, color='green', label='novatel (truth)')
+    plt.plot(interpEastingCompare, interpNorthingCompare, color='red', label='compare (questionable)')
+    plt.ylabel("utm northing (m)")
+    plt.xlabel("utm easting (m)")
     plt.legend()
 
     plt.show()
