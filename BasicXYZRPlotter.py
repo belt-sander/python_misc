@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 def parse_args():
-	arg_parser = argparse.ArgumentParser(description='convert raw IMU data capture from pcb-tools to real data values')
+	arg_parser = argparse.ArgumentParser(description='simple visualization tool for xyzr data')
 	arg_parser.add_argument('-r', '--rows', required=True, type=int, help='number of rows to process')
 	arg_parser.add_argument('-s1', '--scan_1', required=True, help='xyzr scan 1')
 	arg_parser.add_argument('-s2', '--scan_2', required=False, help='xyzr scan 2')
