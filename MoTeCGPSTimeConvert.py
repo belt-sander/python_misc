@@ -99,6 +99,7 @@ def main():
     ### differentiation test
     avg_speed_post = np.zeros((len(inputData),1))
     diff_speed_post = np.zeros((len(inputData),1))
+    filtered_accel_error = np.zeros((len(inputData),1))
     zero = np.zeros((len(inputData),1))
 
     print("iterating through data...")
@@ -134,6 +135,9 @@ def main():
     filtered_diff_speed_post = savgol_filter(diff_speed_post,111,1)
     filtered_vn_accel_x = savgol_filter(vnAccelX,111,1)
     filtered_accel_error = filtered_diff_speed_post - filtered_vn_accel_x
+        
+    ### dark mode
+    plt.style.use('dark_background')
 
     ### can wheel speeds and move states
     plt.figure(1)
@@ -188,20 +192,21 @@ def main():
     plt.legend()
 
     plt.figure(3)
-    plt.subplot(311)
+    plt.subplot(211)
     plt.plot(gpsGenPosix, (avg_speed_post/2.237), label='avg speed m/s')
     plt.legend()
-    plt.subplot(312)
+    plt.subplot(212)
     # plt.plot(gpsGenPosix, diff_speed_post, label='deriv speed x m/s/s raw')
     # plt.plot(gpsGenPosix, vnAccelX, label='vn accel x m/s/s raw')
     plt.plot(gpsGenPosix, filtered_diff_speed_post, label='filtered deriv speed x m/s/s')
     plt.plot(gpsGenPosix, filtered_vn_accel_x, label='filtered vn accel x m/s/s')
+    plt.plot(gpsGenPosix, filtered_accel_error, label='error')
     plt.plot(gpsGenPosix, zero, label='zero')
     plt.legend()
-    plt.subplot(313)
-    plt.plot(gpsGenPosix, filtered_accel_error, label='error between deriv and accel filter')
-    plt.ylim(-2,2)
-    plt.plot(zero)
+    # plt.subplot(313)
+    # plt.plot(gpsGenPosix, filtered_accel_error, label='error between deriv and accel filter')
+    # plt.ylim(-2,2)
+    # plt.plot(zero)
     plt.legend()
 
     plt.show()
