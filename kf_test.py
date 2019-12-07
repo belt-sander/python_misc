@@ -1,18 +1,3 @@
-r'''
-==================================
-Kalman Filter tracking a sine wave
-==================================
-
-This example shows how to use the Kalman Filter for state estimation.
-
-In this example, we generate a fake target trajectory using a sine wave.
-Instead of observing those positions exactly, we observe the position plus some
-random noise.  We then use a Kalman Filter to estimate the velocity of the
-system as well.
-
-The figure drawn illustrates the observations, and the position and velocity
-estimates predicted by the Kalman Smoother.
-'''
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -22,7 +7,7 @@ from pykalman import KalmanFilter
 rnd = np.random.RandomState(0)
 
 # generate a noisy sine wave to act as our fake observations
-n_timesteps = 1000
+n_timesteps = 101
 x = np.linspace(0, 3 * np.pi, n_timesteps)
 observations = 20 * (np.sin(x) + 0.5 * rnd.randn(n_timesteps))
 
@@ -51,15 +36,15 @@ position_line = plt.plot(x, states_pred[:, 0],
 # velocity_line = plt.plot(x, states_pred[:, 1],
 #                         linestyle='-', marker='o', color='g',
 #                         label='velocity est.')
-savgol_line_1 = plt.plot(x, (savgol_filter(observations,555,1)), 
+savgol_line_1 = plt.plot(x, (savgol_filter(observations,55,1)), 
 						label='savgol filter 555')
-savgol_line_2 = plt.plot(x, (savgol_filter(observations,441,1)), 
+savgol_line_2 = plt.plot(x, (savgol_filter(observations,41,1)), 
 						label='savgol filter 441')
-savgol_line_3 = plt.plot(x, (savgol_filter(observations,333,1)), 
+savgol_line_3 = plt.plot(x, (savgol_filter(observations,33,1)), 
 						label='savgol filter 333')
-savgol_line_4 = plt.plot(x, (savgol_filter(observations,221,1)), 
+savgol_line_4 = plt.plot(x, (savgol_filter(observations,21,1)), 
 						label='savgol filter 221')
-savgol_line_5 = plt.plot(x, (savgol_filter(observations,111,1)), 
+savgol_line_5 = plt.plot(x, (savgol_filter(observations,11,1)), 
 						label='savgol filter 111')
 plt.legend(loc='lower right')
 plt.xlim(xmin=0, xmax=x.max())
