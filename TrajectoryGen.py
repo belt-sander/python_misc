@@ -52,6 +52,8 @@ def main():
     gpsTimeTruth = truth[:,0]
     gpsLatTruth = truth[:,1]
     gpsLongTruth = truth[:,2]
+    gpsHeadingTruth = truth[:,13]
+
     gpsTimeCompare = compare[:,0]
     gpsLatCompare = compare[:,21]
     gpsLongCompare = compare[:,22]
@@ -59,9 +61,9 @@ def main():
     gpsRgLong = compare[:,24]
 
     if args.truthOutput is not None:
-        dataOutputTruth = np.column_stack((gpsTimeTruth,gpsLatTruth,gpsLongTruth))
+        dataOutputTruth = np.column_stack((gpsTimeTruth,gpsLatTruth,gpsLongTruth,gpsHeadingTruth))
         np.savetxt(args.truthOutput, dataOutputTruth, fmt='%.9f', delimiter=',')
-        # np.savetxt(args.truthOutput, dataOutputTruth, fmt='%.9f', delimiter=' ', header="# gps time (s), gps latitude (dd), gps longitude (dd)", comments='')
+        np.savetxt(args.truthOutput, dataOutputTruth, fmt='%.9f', delimiter=' ', header="# gps time (s), gps latitude (dd), gps longitude (dd), heading (deg)", comments='')
     if args.compareOutput is not None:    
         dataOutputCompare = np.column_stack((gpsTimeCompare,gpsLatCompare,gpsLongCompare))
         np.savetxt(args.compareOutput, dataOutputCompare, fmt='%.9f', delimiter=',')
