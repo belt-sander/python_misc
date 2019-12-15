@@ -62,10 +62,31 @@ def main():
     wheelSpeedRLFor = np.zeros((len(vehicle),1))
     wheelSpeedRRFor = np.zeros((len(vehicle),1))
 
-    xVar_calc_theta = np.zeros((args.numFrames,1))
-    yVar_calc_theta = np.zeros((args.numFrames,1))
-    xVar_gps_theta = np.zeros((args.numFrames,1))
-    yVar_gps_theta = np.zeros((args.numFrames,1))
+    xVar_calc_theta_a = np.zeros((args.numFrames,1))
+    yVar_calc_theta_a = np.zeros((args.numFrames,1))
+    xVar_gps_theta_a = np.zeros((args.numFrames,1))
+    yVar_gps_theta_a = np.zeros((args.numFrames,1))
+
+    xVar_calc_theta_b = np.zeros((args.numFrames,1))
+    yVar_calc_theta_b = np.zeros((args.numFrames,1))
+    xVar_gps_theta_b = np.zeros((args.numFrames,1))
+    yVar_gps_theta_b = np.zeros((args.numFrames,1))    
+
+    xVar_calc_theta_c = np.zeros((args.numFrames,1))
+    yVar_calc_theta_c = np.zeros((args.numFrames,1))
+    xVar_gps_theta_c = np.zeros((args.numFrames,1))
+    yVar_gps_theta_c = np.zeros((args.numFrames,1))    
+
+    xVar_calc_theta_d = np.zeros((args.numFrames,1))
+    yVar_calc_theta_d = np.zeros((args.numFrames,1))
+    xVar_gps_theta_d = np.zeros((args.numFrames,1))
+    yVar_gps_theta_d = np.zeros((args.numFrames,1))    
+
+    xVar_calc_theta_e = np.zeros((args.numFrames,1))
+    yVar_calc_theta_e = np.zeros((args.numFrames,1))
+    xVar_gps_theta_e = np.zeros((args.numFrames,1))
+    yVar_gps_theta_e = np.zeros((args.numFrames,1)) 
+
     theta_relative = np.zeros((args.numFrames,1))
     theta_global = np.zeros((args.numFrames,1))
     phi = np.zeros((args.numFrames,1))
@@ -75,6 +96,7 @@ def main():
     gpsHeadingRelative = np.zeros((args.numFrames,1))
     gpsHeadingAbsolute = np.zeros((args.numFrames,1))
     steeringRackAngle = np.zeros((len(vehicle),1))
+    steeringWheelAngleRate = np.zeros((len(vehicle),1))
 
     gpsTimeTruth = truth[:,0]
     gpsLatTruth = truth[:,1]
@@ -161,10 +183,10 @@ def main():
     interpAvgRearAxleSpeed = np.interp(gpsTimeTruthFor, gpsTimeVehicleArr, avgRearAxleSpeedArr)
 
     # new array with data from novatel and vehicle for next for loop
-    combinedData = np.column_stack((gpsTimeTruthFor,gpsNorthingTruth,gpsEastingTruth, calcHeadingOffset,calcVelNorth,calcVelEast,interpAvgRearAxleSpeed,interpSteeringRackAngle,interpSteeredWheelAngle))
+    combinedData = np.column_stack((gpsTimeTruthFor,gpsNorthingTruth,gpsEastingTruth, calcHeadingOffset,calcVelNorth,calcVelEast,interpAvgRearAxleSpeed,interpSteeringRackAngle,interpSteeredWheelAngle, interpSteerWheelAngleRate))
     # write output to text file
     if args.trajectoryOutput is not None:
-        np.savetxt(args.novatelTrajectoryOutput, dataOutputTruth, fmt='%.9f', delimiter=' ', header="# gps time (s), gps N UTM, gps E UTM, heading(rad), north velocity (m/s), east vel (m/s), rear axle speed (m/s), front wheel angle (rad), steering wheel angle (rad)", comments='')
+        np.savetxt(args.novatelTrajectoryOutput, dataOutputTruth, fmt='%.9f', delimiter=' ', header="# gps time (s), gps N UTM, gps E UTM, heading(rad), north velocity (m/s), east vel (m/s), rear axle speed (m/s), front wheel angle (rad), steering wheel angle (rad), steering wheel angle rate (rad/sec)", comments='')
 
     # theta calculation
     for i, row in enumerate(combinedData):
@@ -183,10 +205,12 @@ def main():
         calcRearAxleVel = row[6]
         calcSteerRackAngle = (row[7] * rackScalar) + rackAdder # radians
         calcSteerWheelAngle = row[8]
+        calcSteerWheelAngleRate = row[9]
 
         # output rear axle velocity and steer rack angle
         rearAxleVel[i,:] = calcRearAxleVel      
         steeringRackAngle[i,:] = calcSteerRackAngle
+        steeringWheelAngleRate[i,:] = calcSteerWheelAngleRate
 
         # novatel heading to relative
         gpsHeadingRelative[i,:] = calcHeadingOffsetOutput - calcHeadingOffset[0]
@@ -207,16 +231,61 @@ def main():
         theta_relative[i,:] = (calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngle))*(dt)        
         theta_global[i,:] = (calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngle))*(dt) + calcHeadingOffset[0]
 
-    # prediction calculation
-    predTime = 0
-    for predTime in range(500):
-        predTime + 1
-        startSample = 200
+    # prediction calculation A
+    predTime_a = 0
+    startSample_a = 0
+    for predTime_a in range(500-startSample_a):
+        predTime_a + 1
         # print('pred time: ', predTime*0.01)
-        xVar_gps_theta[predTime,:] = rearAxleVel[startSample]*(np.cos(gpsHeadingAbsolute[startSample])) * (predTime*0.01)
-        yVar_gps_theta[predTime,:] = rearAxleVel[startSample]*(np.sin(gpsHeadingAbsolute[startSample])) * (predTime*0.01)
-        xVar_calc_theta[predTime,:] = rearAxleVel[startSample]*(np.cos(theta_global[startSample])) * (predTime*0.01)
-        yVar_calc_theta[predTime,:] = rearAxleVel[startSample]*(np.sin(theta_global[startSample])) * (predTime*0.01)
+        xVar_gps_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.cos(gpsHeadingAbsolute[startSample_a])) * (predTime_a*0.01)
+        yVar_gps_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.sin(gpsHeadingAbsolute[startSample_a])) * (predTime_a*0.01)
+        xVar_calc_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.cos(theta_global[startSample_a])) * (predTime_a*0.01)
+        yVar_calc_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.sin(theta_global[startSample_a])) * (predTime_a*0.01)
+
+    # prediction calculation B
+    predTime_b = 0
+    startSample_b = 100
+    for predTime_b in range(500-startSample_b):
+        predTime_b + 1
+        # print('pred time: ', predTime*0.01)
+        xVar_gps_theta_b[predTime_b,:] = (rearAxleVel[startSample_b]*(np.cos(gpsHeadingAbsolute[startSample_b])) * (predTime_b*0.01)) + gpsNorthingRelativeTruth[startSample_b]
+        yVar_gps_theta_b[predTime_b,:] = (rearAxleVel[startSample_b]*(np.sin(gpsHeadingAbsolute[startSample_b])) * (predTime_b*0.01))  + gpsEastingRelativeTruth[startSample_b]
+        xVar_calc_theta_b[predTime_b,:] = (rearAxleVel[startSample_b]*(np.cos(theta_global[startSample_b])) * (predTime_b*0.01)) + gpsNorthingRelativeTruth[startSample_b]
+        yVar_calc_theta_b[predTime_b,:] = (rearAxleVel[startSample_b]*(np.sin(theta_global[startSample_b])) * (predTime_b*0.01)) + gpsEastingRelativeTruth[startSample_b]
+
+    # prediction calculation C
+    predTime_c = 0
+    startSample_c = 200
+    for predTime_c in range(500-startSample_c):
+        predTime_c + 1
+        # print('pred time: ', predTime*0.01)
+        xVar_gps_theta_c[predTime_c,:] = (rearAxleVel[startSample_c]*(np.cos(gpsHeadingAbsolute[startSample_c])) * (predTime_c*0.01)) + gpsNorthingRelativeTruth[startSample_c]
+        yVar_gps_theta_c[predTime_c,:] = (rearAxleVel[startSample_c]*(np.sin(gpsHeadingAbsolute[startSample_c])) * (predTime_c*0.01))  + gpsEastingRelativeTruth[startSample_c]
+        xVar_calc_theta_c[predTime_c,:] = (rearAxleVel[startSample_c]*(np.cos(theta_global[startSample_c])) * (predTime_c*0.01)) + gpsNorthingRelativeTruth[startSample_c]
+        yVar_calc_theta_c[predTime_c,:] = (rearAxleVel[startSample_c]*(np.sin(theta_global[startSample_c])) * (predTime_c*0.01)) + gpsEastingRelativeTruth[startSample_c]
+
+    # prediction calculation d
+    predTime_d = 0
+    startSample_d = 300
+    for predTime_d in range(500-startSample_d):
+        predTime_d + 1
+        # print('pred time: ', predTime*0.01)
+        xVar_gps_theta_d[predTime_d,:] = (rearAxleVel[startSample_d]*(np.cos(gpsHeadingAbsolute[startSample_d])) * (predTime_d*0.01)) + gpsNorthingRelativeTruth[startSample_d]
+        yVar_gps_theta_d[predTime_d,:] = (rearAxleVel[startSample_d]*(np.sin(gpsHeadingAbsolute[startSample_d])) * (predTime_d*0.01))  + gpsEastingRelativeTruth[startSample_d]
+        xVar_calc_theta_d[predTime_d,:] = (rearAxleVel[startSample_d]*(np.cos(theta_global[startSample_d])) * (predTime_d*0.01)) + gpsNorthingRelativeTruth[startSample_d]
+        yVar_calc_theta_d[predTime_d,:] = (rearAxleVel[startSample_d]*(np.sin(theta_global[startSample_d])) * (predTime_d*0.01)) + gpsEastingRelativeTruth[startSample_d]
+
+    # prediction calculation e
+    predTime_e = 0
+    startSample_e = 400
+    for predTime_e in range(500-startSample_e):
+        predTime_e + 1
+        # print('pred time: ', predTime*0.01)
+        xVar_gps_theta_e[predTime_e,:] = (rearAxleVel[startSample_e]*(np.cos(gpsHeadingAbsolute[startSample_e])) * (predTime_e*0.01)) + gpsNorthingRelativeTruth[startSample_e]
+        yVar_gps_theta_e[predTime_e,:] = (rearAxleVel[startSample_e]*(np.sin(gpsHeadingAbsolute[startSample_e])) * (predTime_e*0.01))  + gpsEastingRelativeTruth[startSample_e]
+        xVar_calc_theta_e[predTime_e,:] = (rearAxleVel[startSample_e]*(np.cos(theta_global[startSample_e])) * (predTime_e*0.01)) + gpsNorthingRelativeTruth[startSample_e]
+        yVar_calc_theta_e[predTime_e,:] = (rearAxleVel[startSample_e]*(np.sin(theta_global[startSample_e])) * (predTime_e*0.01)) + gpsEastingRelativeTruth[startSample_e]
+
 
     print('')
     print('absolute gps heading at array 10: ', calcHeadingOffset[10], 'deg: ', calcHeadingOffset[10]*180/np.pi)
@@ -227,87 +296,76 @@ def main():
     print('')
     print('interpSteeringRackAngle: ', interpSteeringRackAngle[10], 'deg: ', interpSteeringRackAngle[10]*180/np.pi)
     print('interpSteeredWheelAngle: ', interpSteeredWheelAngle[10], 'deg: ', interpSteeredWheelAngle[10]*180/np.pi)
+    print('')
 
     # plots
     plt.style.use('dark_background')
 
     plt.figure(1)
-    plt.subplot(611)
+    plt.subplot(511)    
     plt.title('model tests')
-    plt.plot(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, label='novatel rel position (m)')
-    plt.plot(xVar_gps_theta, yVar_gps_theta, label='future prediction gps heading (m / x,y)')
-    plt.plot(xVar_calc_theta, yVar_calc_theta, label='future prediction theta heading (m / x,y)')
+    plt.plot(gpsTimeTruthFor, gpsNorthingRelativeTruth, '-o', label='northing rel')
+    plt.plot(gpsTimeTruthFor, xVar_calc_theta_a, label='x prediction calc theta a')
+
+    plt.plot(gpsTimeTruthFor, gpsEastingRelativeTruth, '-o', label='easting rel')
+    plt.plot(gpsTimeTruthFor, yVar_calc_theta_a, label='y prediction calc theta a')    
+    plt.ylim(-60,60)
     plt.legend()
 
-    plt.subplot(612)
-    plt.plot(gpsTimeTruthFor, gpsNorthingRelativeTruth, label='northing rel')
-    plt.plot(gpsTimeTruthFor, gpsEastingRelativeTruth, label='easting rel')
-    plt.plot(gpsTimeTruthFor, xVar_gps_theta, label='x prediction gps theta')
-    plt.plot(gpsTimeTruthFor, yVar_gps_theta, label='y prediction gps theta')
-    plt.plot(gpsTimeTruthFor, xVar_calc_theta, label='x prediction calc theta')
-    plt.plot(gpsTimeTruthFor, yVar_calc_theta, label='y prediction calc theta')    
-    plt.legend()
-
-    plt.subplot(613)
+    plt.subplot(512)
     plt.plot(gpsTimeTruthFor, calcVelBodyForward, label='forward vel (m/s)')
     plt.plot(gpsTimeTruthFor, interpAvgRearAxleSpeed, label='avg rear axle speed (m/s)')
     plt.legend()
 
-    plt.subplot(614)
+    plt.subplot(513)
     plt.plot(gpsTimeTruthFor, interpSteeredWheelAngle, label='steering wheel angle (rad)')
     plt.plot(gpsTimeTruthFor, theta_relative, label='theta rel (rad)')
     plt.legend()
 
-    plt.subplot(615)
+    plt.subplot(514)
     plt.plot(gpsTimeTruthFor, gpsHeadingRelative, label='heading rel (rad)')
     plt.plot(gpsTimeTruthFor, theta_relative, label='predicted theta rel (rad)')
     # plt.plot(gpsTimeTruthFor, calcVelNorth, label = 'north vel (m/s)')
     # plt.plot(gpsTimeTruthFor, calcVelEast, label = 'east vel (m/s)')
     plt.legend()
 
-    plt.subplot(616)
+    plt.subplot(515)
     plt.plot(gpsTimeTruthFor, calcHeadingOffset, label='heading abs (rad)')
     plt.plot(gpsTimeTruthFor, theta_global, label='predicted theta global (rad)')
     plt.legend()
 
     plt.figure(2)
     plt.grid(b=True)
-    plt.title('x/y predictions')
-    plt.plot(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, '-o', color='green', label='novatel rel position (m)')
-    plt.plot(xVar_calc_theta, yVar_calc_theta,'-o', color='red', label='future prediction calc theta (m / x,y)')
-    plt.plot(xVar_gps_theta, yVar_gps_theta, '-o', label='future prediction gps heading (m / x,y)')
+    plt.title('global x/y predictions')
+    plt.scatter(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, color='green', label='novatel rel position (m)')
+    plt.scatter(xVar_calc_theta_a, yVar_calc_theta_a, color='red', label='future prediction theta 0 seconds (m / x,y)')
+    plt.scatter(xVar_calc_theta_b, yVar_calc_theta_b, color='purple', label='future prediction theta 1 seconds (m / x,y)')
+    plt.scatter(xVar_calc_theta_c, yVar_calc_theta_c, color='orange', label='future prediction theta 2 seconds (m / x,y)')
+    plt.scatter(xVar_calc_theta_d, yVar_calc_theta_d, color='cyan', label='future prediction theta 3 seconds (m / x,y)')
+    plt.scatter(xVar_calc_theta_e, yVar_calc_theta_e, color='blue', label='future prediction theta 4 seconds (m / x,y)')            
     plt.xlim(-60,60)
     plt.ylim(-60,60)
     plt.legend()
 
-    plt.figure(3)
-    plt.subplot(311)
-    plt.plot(gpsTimeVehicleFor, pathRadius, label='path radius (inches)')
-    plt.plot(gpsTimeVehicleFor, steerWheelAngleFor, label='steer angle (deg)')
-    # plt.ylim(-500, 500)
-    plt.legend()
-
-    plt.subplot(312)
-    plt.plot(gpsTimeVehicleFor, calcSteerWheelRate, label='steering rack angle rate (rad/sec)')
-    plt.legend()
-
-    plt.subplot(313)
-    plt.plot(gpsTimeVehicleFor, wheelSpeedFLFor, label='wheel speed FL')
-    plt.plot(gpsTimeVehicleFor, wheelSpeedFRFor, label='wheel speed FR')
-    plt.plot(gpsTimeVehicleFor, wheelSpeedRLFor, label='wheel speed RL')
-    plt.plot(gpsTimeVehicleFor, wheelSpeedRRFor, label='wheel speed RR')    
-    plt.legend()
-
     # plt.figure(3)
     # plt.subplot(311)
-    # plt.plot(gpsTimeVehicleFor, avgSpeedFor, label='avg speed vehicle')
+    # plt.plot(gpsTimeVehicleFor, pathRadius, label='path radius (inches)')
+    # plt.plot(gpsTimeVehicleFor, steerWheelAngleFor, label='steer angle (deg)')
     # plt.legend()
 
     # plt.subplot(312)
-    # plt.plot(gpsTimeVehicleFor, steerWheelAngleFor, label='steering wheel angle')
+    # plt.plot(gpsTimeVehicleFor, calcSteerWheelRate, label='steering rack angle rate (rad/sec)')
     # plt.legend()
 
     # plt.subplot(313)
+    # plt.plot(gpsTimeVehicleFor, wheelSpeedFLFor, label='wheel speed FL')
+    # plt.plot(gpsTimeVehicleFor, wheelSpeedFRFor, label='wheel speed FR')
+    # plt.plot(gpsTimeVehicleFor, wheelSpeedRLFor, label='wheel speed RL')
+    # plt.plot(gpsTimeVehicleFor, wheelSpeedRRFor, label='wheel speed RR')    
+    # plt.legend()
+
+    # plt.figure(3)
+    # plt.subplot(111)
     # plt.plot(gpsTimeVehicleFor, vnAccelXFor, label='accel x m/s/s')
     # plt.plot(gpsTimeVehicleFor, vnAccelYFor, label='accel y m/s/s')
     # plt.legend()
