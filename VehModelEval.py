@@ -87,6 +87,11 @@ def main():
     xVar_gps_theta_e = np.zeros((args.numFrames,1))
     yVar_gps_theta_e = np.zeros((args.numFrames,1)) 
 
+    xVar_calc_theta_f = np.zeros((args.numFrames,1))
+    yVar_calc_theta_f = np.zeros((args.numFrames,1))
+    xVar_gps_theta_f = np.zeros((args.numFrames,1))
+    yVar_gps_theta_f = np.zeros((args.numFrames,1)) 
+
     theta_relative = np.zeros((args.numFrames,1))
     theta_global = np.zeros((args.numFrames,1))
     phi = np.zeros((args.numFrames,1))
@@ -243,7 +248,7 @@ def main():
         yVar_calc_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.sin(theta_global[startSample_a])) * (predTime_a*0.01)
 
     # prediction calculation B
-    predTime_b = 0
+    predTime_b = 100
     startSample_b = 100
     for predTime_b in range(500-startSample_b):
         predTime_b + 1
@@ -254,7 +259,7 @@ def main():
         yVar_calc_theta_b[predTime_b,:] = (rearAxleVel[startSample_b]*(np.sin(theta_global[startSample_b])) * (predTime_b*0.01)) + gpsEastingRelativeTruth[startSample_b]
 
     # prediction calculation C
-    predTime_c = 0
+    predTime_c = 200
     startSample_c = 200
     for predTime_c in range(500-startSample_c):
         predTime_c + 1
@@ -265,7 +270,7 @@ def main():
         yVar_calc_theta_c[predTime_c,:] = (rearAxleVel[startSample_c]*(np.sin(theta_global[startSample_c])) * (predTime_c*0.01)) + gpsEastingRelativeTruth[startSample_c]
 
     # prediction calculation d
-    predTime_d = 0
+    predTime_d = 300
     startSample_d = 300
     for predTime_d in range(500-startSample_d):
         predTime_d + 1
@@ -276,7 +281,7 @@ def main():
         yVar_calc_theta_d[predTime_d,:] = (rearAxleVel[startSample_d]*(np.sin(theta_global[startSample_d])) * (predTime_d*0.01)) + gpsEastingRelativeTruth[startSample_d]
 
     # prediction calculation e
-    predTime_e = 0
+    predTime_e = 400
     startSample_e = 400
     for predTime_e in range(500-startSample_e):
         predTime_e + 1
@@ -286,6 +291,16 @@ def main():
         xVar_calc_theta_e[predTime_e,:] = (rearAxleVel[startSample_e]*(np.cos(theta_global[startSample_e])) * (predTime_e*0.01)) + gpsNorthingRelativeTruth[startSample_e]
         yVar_calc_theta_e[predTime_e,:] = (rearAxleVel[startSample_e]*(np.sin(theta_global[startSample_e])) * (predTime_e*0.01)) + gpsEastingRelativeTruth[startSample_e]
 
+    # prediction calculation experiment
+    predTime_f = 0
+    startSample_f = 0
+    for predTime_f in range(500-startSample_f):
+        predTime_f + 1
+        # print('pred time: ', predTime*0.01)
+        xVar_gps_theta_f[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(gpsHeadingAbsolute[predTime_f]))) * 0 # (predTime_f*0.01)) 
+        yVar_gps_theta_f[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(gpsHeadingAbsolute[predTime_f]))) * 0 # (predTime_f*0.01)) 
+        xVar_calc_theta_f[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(theta_global[predTime_f]))) * 0 # (predTime_f*0.01)) 
+        yVar_calc_theta_f[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(theta_global[predTime_f]))) * 0 # (predTime_f*0.01)) 
 
     print('')
     print('absolute gps heading at array 10: ', calcHeadingOffset[10], 'deg: ', calcHeadingOffset[10]*180/np.pi)
@@ -337,12 +352,13 @@ def main():
     plt.figure(2)
     plt.grid(b=True)
     plt.title('global x/y predictions')
-    plt.scatter(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, color='green', label='novatel rel position (m)')
+    plt.scatter(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, c=interpAvgRearAxleSpeed, s=100, cmap='Greens', label='novatel rel position (m)')
     plt.scatter(xVar_calc_theta_a, yVar_calc_theta_a, color='red', label='future prediction theta 0 seconds (m / x,y)')
     plt.scatter(xVar_calc_theta_b, yVar_calc_theta_b, color='purple', label='future prediction theta 1 seconds (m / x,y)')
     plt.scatter(xVar_calc_theta_c, yVar_calc_theta_c, color='orange', label='future prediction theta 2 seconds (m / x,y)')
     plt.scatter(xVar_calc_theta_d, yVar_calc_theta_d, color='cyan', label='future prediction theta 3 seconds (m / x,y)')
-    plt.scatter(xVar_calc_theta_e, yVar_calc_theta_e, color='blue', label='future prediction theta 4 seconds (m / x,y)')            
+    plt.scatter(xVar_calc_theta_e, yVar_calc_theta_e, color='blue', label='future prediction theta 4 seconds (m / x,y)')
+    plt.scatter(xVar_calc_theta_f, yVar_calc_theta_f, color='pink', label='experiment seconds (m / x,y)')                
     plt.xlim(-60,60)
     plt.ylim(-60,60)
     plt.legend()
