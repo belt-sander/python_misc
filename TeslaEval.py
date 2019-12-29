@@ -41,6 +41,7 @@ def main():
     gpsHeadingRad = np.zeros((len(ubxInput),1))
     gpsRelativeMotionNorthing = np.zeros((len(ubxInput),1))
     gpsRelativeMotionEasting = np.zeros((len(ubxInput),1))
+    motecVnYaw = np.zeros((len(ubxInput),1))
 
     # data to be used in num_frames
     thetaRecursiveCalc = np.zeros(((args.num_frames),1))
@@ -78,10 +79,11 @@ def main():
     steeringWheelAngle = motecInput[:,243]
     wheelSpeedLeftRear = motecInput[:,185]
     wheelSpeedRightRear = motecInput[:,186]
+    vnYaw = motecInput[:,3]
 
     # visual time syncronization laying velocity from vehicle controller on top of SoG output from ublox
-    userTimeOffset = 5.7 # file 2 
-    # userTimeOffset = 11.8 # file 1 
+    # userTimeOffset = 5.7 # file 2 
+    userTimeOffset = 11.8 # file 1 
     for i, row in enumerate(motecInput):
         system_time_for = row[0]
         motecTow[i,:] = system_time_for + ubxTow[0] + userTimeOffset
@@ -91,6 +93,7 @@ def main():
     InterpSteeringWheelAngle = np.interp(ubxTow, InterpMotecTow, steeringWheelAngle) # degree
     InterpWheelSpeedLeftRear = np.interp(ubxTow, InterpMotecTow, wheelSpeedLeftRear) # m/s
     InterpWheelSpeedRightRear = np.interp(ubxTow, InterpMotecTow, wheelSpeedRightRear) # m/s
+    InterpMotecVnYaw = np.interp(ubxTow, InterpMotecTow, vnYaw) # degree
 
     # convert ublox from LLA to UTM
     ubxProj = Proj("+proj=utm +zone=10S, +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
@@ -108,7 +111,7 @@ def main():
     wheelBase = 2.95 # meters    
 
     # combine relevant data in to new column stack
-    syncData = np.column_stack((ubxTow, ubxNorthing, ubxEasting, ubxHeading, InterpWheelSpeedLeftRear, InterpWheelSpeedRightRear, InterpSteeringWheelAngle))
+    syncData = np.column_stack((ubxTow, ubxNorthing, ubxEasting, ubxHeading, InterpWheelSpeedLeftRear, InterpWheelSpeedRightRear, InterpSteeringWheelAngle, InterpMotecVnYaw))
     for i, row in enumerate(syncData):
         ubx_northing = row[1]
         ubx_easting = row[2]
@@ -116,6 +119,12 @@ def main():
         lr_speed = row[4]
         rr_speed = row[5]
         steer_wheel_angle = row[6] * np.pi/180
+        vn_yaw = row[7]
+
+        if (vn_yaw < 0):
+            motecVnYaw[i,:] = vn_yaw + 360
+        else:
+            motecVnYaw[i,:] = vn_yaw
 
         gpsHeadingRad[i,:] = ubx_heading * np.pi/180
         avgRearAxleSpeed[i,:] = ((lr_speed + rr_speed) / 2) * speedCorrection
@@ -175,19 +184,24 @@ def main():
 
     # plot
     plt.figure(1)
-    plt.subplot(311)
+    plt.subplot(411)
     plt.plot(ubxTow, InterpVelocity, color='red', label='forward vel vectornav (m/s)')
     plt.plot(ubxTow, ubxVelocity, color='blue', label='forward vel ubx (m/s)')
     plt.plot(ubxTow, avgRearAxleSpeed, label='average rear axle speed (m/s)')
     plt.legend()
 
-    plt.subplot(312)
+    plt.subplot(412)
     plt.plot(ubxTow, InterpSteeringWheelAngle, label='steering wheel angle (deg)')
     plt.legend()
 
-    plt.subplot(313)
+    plt.subplot(413)
     plt.plot(ubxTow, InterpWheelSpeedLeftRear, label='left rear wheel speed (m/s)')
     plt.plot(ubxTow, InterpWheelSpeedRightRear, label='right rear wheel speed (m/s)')
+    plt.legend()
+
+    plt.subplot(414)
+    plt.plot(ubxTow, motecVnYaw, label='vn heading')
+    plt.plot(ubxTow, gpsHeadingRad*180/np.pi, label='ubx heading')
     plt.legend()
 
     plt.figure(2)
