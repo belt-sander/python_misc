@@ -22,10 +22,15 @@ def parse_args():
 def main():
     args = parse_args() 
     truth = np.genfromtxt(args.novatelTrajectory, skip_header=args.numStartingFramesSkipped, delimiter=' ')
-    vehicle = np.genfromtxt(args.vehicleData, skip_header=1, delimiter=' ')
+    vehicle = np.genfromtxt(args.vehicleData, skip_header=1, skip_footer=1, delimiter=' ')
 
     print('')
     print('data has been imported')
+
+    print('')
+    print('vehicle size: ', np.size(vehicle))
+    print('')
+    print('truth size: ', np.size(truth))
 
     myProjTruth = Proj("+proj=utm +zone=10S, +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
 
@@ -70,16 +75,20 @@ def main():
 
     xVar_calc_theta_static = np.zeros((args.numFrames,1))
     yVar_calc_theta_static = np.zeros((args.numFrames,1))
-    xVar_calc_theta_recursive = np.zeros((args.numFrames,1))
-    yVar_calc_theta_recursive = np.zeros((args.numFrames,1))    
+    xVar_calc_theta_recursive_model = np.zeros((args.numFrames,1))
+    yVar_calc_theta_recursive_model = np.zeros((args.numFrames,1))    
+    xVar_calc_theta_recursive_static = np.zeros((args.numFrames,1))
+    yVar_calc_theta_recursive_static = np.zeros((args.numFrames,1))        
     xVar_gps_theta_recursive = np.zeros((args.numFrames,1))
     yVar_gps_theta_recursive = np.zeros((args.numFrames,1)) 
 
     theta_relative_static = np.zeros((args.numFrames,1))
     theta_reltaive_static_correction = np.zeros((args.numFrames,1))
-    theta_relative_recursive = np.zeros((args.numFrames,1))    
+    theta_relative_recursive_model = np.zeros((args.numFrames,1))
+    theta_relative_recursive_static = np.zeros((args.numFrames,1))        
     theta_relative_recursive_correction = np.zeros((args.numFrames,1))
     theta_global = np.zeros((args.numFrames,1))
+
     phi = np.zeros((args.numFrames,1))
     rearAxleVel = np.zeros((args.numFrames,1))
     gpsNorthingRelativeTruth = np.zeros((args.numFrames,1))
@@ -87,6 +96,7 @@ def main():
     gpsHeadingRelative = np.zeros((args.numFrames,1))
     gpsHeadingAbsolute = np.zeros((args.numFrames,1))
     steeringRackAngle = np.zeros((len(vehicle),1))
+    steeringRackAngleModel = np.zeros((len(vehicle),1))
     steeringWheelAngleRate = np.zeros((len(vehicle),1))
 
     error_gps_x = np.zeros((args.numFrames,1))
@@ -191,7 +201,6 @@ def main():
         wheelBase = 2.7 # 106.3 inches
         trackWidth = 1.5621 # 61.5 inches rear  
         rackScalar = 1
-        rackAdder = 0
 
         gpstimeTruthOutput = row[0]
         gpsNorthingTruthOutput = row[1] 
@@ -200,13 +209,15 @@ def main():
         calcVelNorthOutput = row[4]
         calcVelEastOutput = row[5]
         calcRearAxleVel = row[6]
-        calcSteerRackAngle = (row[7] * rackScalar) + rackAdder # radians
+        calcSteerRackAngleModel = (row[7] * ((-0.030*calcRearAxleVel)+1)) # derived function for Honda ONLY!!        
+        calcSteerRackAngle = row[7] * rackScalar
         calcSteerWheelAngle = row[8]
         calcSteerWheelAngleRate = row[9]
 
         # output rear axle velocity and steer rack angle
         rearAxleVel[i,:] = calcRearAxleVel      
-        steeringRackAngle[i,:] = calcSteerRackAngle
+        steeringRackAngle[i,:] = calcSteerRackAngle  
+        steeringRackAngleModel[i,:] = calcSteerRackAngleModel
         steeringWheelAngleRate[i,:] = calcSteerWheelAngleRate
 
         # novatel heading to relative
@@ -226,12 +237,14 @@ def main():
         # theta  
         dt = (i*0.01)
         theta_relative_static[i,:] =    ((rearAxleVel[0]/wheelBase) * (np.tan(steeringRackAngle[0])) * (0.01)) + theta_relative_static[i-1] 
-        theta_relative_recursive[i,:] = ((calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngle)) * (0.01)) + theta_relative_recursive[i-1] #+ calcHeadingOffset[0]
+        theta_relative_recursive_model[i,:] = ((calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngleModel)) * (0.01)) + theta_relative_recursive_model[i-1] #+ calcHeadingOffset[0]
+        theta_relative_recursive_static[i,:] = ((calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngle)) * (0.01)) + theta_relative_recursive_static[i-1] #+ calcHeadingOffset[0]
         theta_global[i,:] =             (rearAxleVel[0]/wheelBase) * (np.tan(steeringRackAngle[0])) * (0.01) + theta_global[i-1] + calcHeadingOffset[0]
 
     # theta global correction
-    theta_reltaive_static_correction = theta_relative_static + calcHeadingOffset[0]
-    theta_relative_recursive_correction = theta_relative_recursive + calcHeadingOffset[0]    
+    theta_relative_static_correction = theta_relative_static + calcHeadingOffset[0]
+    theta_relative_recursive_correction = theta_relative_recursive_model + calcHeadingOffset[0]
+    theta_relative_static_correction = theta_relative_recursive_static + calcHeadingOffset[0]        
 
     # relative position integration
     calcPosBodyForward = np.cumsum(calcVelBodyForward) * 0.01
@@ -240,7 +253,7 @@ def main():
     # prediction calculation A
     predTime_a = 0
     startSample_a = 0
-    for predTime_a in range(500):
+    for predTime_a in range(args.numFrames):
         predTime_a + 1
         # print('pred time: ', predTime*0.01)
         xVar_gps_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.cos(gpsHeadingAbsolute[startSample_a])) * (0.01) + (xVar_gps_theta_a[predTime_a-1])
@@ -251,26 +264,29 @@ def main():
     # prediction calculation experiment
     predTime_f = 0
     startSample_f = 0
-    for predTime_f in range(500-startSample_f):
+    for predTime_f in range(args.numFrames-startSample_f):
         predTime_f + 1
 
         xVar_gps_theta_recursive[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(gpsHeadingAbsolute[predTime_f])) * (0.01) + xVar_gps_theta_recursive[predTime_f-1]) 
         yVar_gps_theta_recursive[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(gpsHeadingAbsolute[predTime_f])) * (0.01) + yVar_gps_theta_recursive[predTime_f-1]) 
 
-        xVar_calc_theta_static[predTime_f,:] = (rearAxleVel[0]*(np.cos(theta_reltaive_static_correction[predTime_f-1])) * (0.01)) + (xVar_calc_theta_static[predTime_f-1])
-        yVar_calc_theta_static[predTime_f,:] = (rearAxleVel[0]*(np.sin(theta_reltaive_static_correction[predTime_f-1])) * (0.01)) + (yVar_calc_theta_static[predTime_f-1])
+        xVar_calc_theta_static[predTime_f,:] = (rearAxleVel[0]*(np.cos(theta_relative_static_correction[predTime_f-1])) * (0.01)) + (xVar_calc_theta_static[predTime_f-1])
+        yVar_calc_theta_static[predTime_f,:] = (rearAxleVel[0]*(np.sin(theta_relative_static_correction[predTime_f-1])) * (0.01)) + (yVar_calc_theta_static[predTime_f-1])
 
-        xVar_calc_theta_recursive[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(theta_relative_recursive_correction[predTime_f])) * (0.01)) + (xVar_calc_theta_recursive[predTime_f-1])
-        yVar_calc_theta_recursive[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(theta_relative_recursive_correction[predTime_f])) * (0.01)) + (yVar_calc_theta_recursive[predTime_f-1])
+        xVar_calc_theta_recursive_static[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(theta_relative_static_correction[predTime_f])) * (0.01)) + (xVar_calc_theta_recursive_static[predTime_f-1])
+        yVar_calc_theta_recursive_static[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(theta_relative_static_correction[predTime_f])) * (0.01)) + (yVar_calc_theta_recursive_static[predTime_f-1])
+
+        xVar_calc_theta_recursive_model[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(theta_relative_recursive_correction[predTime_f])) * (0.01)) + (xVar_calc_theta_recursive_model[predTime_f-1])
+        yVar_calc_theta_recursive_model[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(theta_relative_recursive_correction[predTime_f])) * (0.01)) + (yVar_calc_theta_recursive_model[predTime_f-1])
         
         # print('sample: ', predTime_f, ' x_static: ', xVar_calc_theta_static[predTime_f], ' y_static: ', yVar_calc_theta_static[predTime_f], 'theta_relative_static: ', theta_relative_static[predTime_f])
         # print('sample: ', predTime_f, ' x_recursive: ', xVar_calc_theta_recursive[predTime_f], ' y_recursive: ', yVar_calc_theta_recursive[predTime_f], 'theta_relative_recursive: ', theta_relative_recursive[predTime_f])
-
+ 
     # error generation
     error_gps_x = gpsNorthingRelativeTruth - xVar_gps_theta_recursive
     error_gps_y =  gpsEastingRelativeTruth - yVar_gps_theta_recursive
-    error_theta_recursive_x = gpsNorthingRelativeTruth - xVar_calc_theta_recursive
-    error_theta_recursive_y = gpsEastingRelativeTruth - yVar_calc_theta_recursive
+    error_theta_recursive_x = gpsNorthingRelativeTruth - xVar_calc_theta_recursive_model
+    error_theta_recursive_y = gpsEastingRelativeTruth - yVar_calc_theta_recursive_model
     error_theta_static_x = gpsNorthingRelativeTruth - xVar_calc_theta_static
     error_theta_static_y = gpsEastingRelativeTruth - yVar_calc_theta_static
 
@@ -278,36 +294,29 @@ def main():
     plt.style.use('dark_background')
 
     plt.figure(1)
-    plt.subplot(611)
+    plt.subplot(511)
     plt.title('error plots')
     plt.plot(gpsTimeTruthFor, error_gps_x, label='gps X error (m)')
     plt.plot(gpsTimeTruthFor, error_gps_y, label='gps Y error (m)')
     plt.plot(gpsTimeTruthFor, zero)
     plt.legend()
 
-    plt.subplot(612)
+    plt.subplot(512)
     plt.plot(gpsTimeTruthFor, error_theta_recursive_x, label='error theta recursive X (m)')
     plt.plot(gpsTimeTruthFor, error_theta_recursive_y, label='error theta recursive Y (m)')
     plt.plot(gpsTimeTruthFor, zero)
 #    plt.ylim(-15,15)
     plt.legend()
 
-    plt.subplot(613)
-    plt.plot(gpsTimeTruthFor, error_theta_static_x, label='error theta static prop X (m)')
-    plt.plot(gpsTimeTruthFor, error_theta_static_y, label='error theta static prop Y (m)')
-    plt.plot(gpsTimeTruthFor, zero)
-#    plt.ylim(-15,15)
-    plt.legend()
-
-    plt.subplot(614)
+    plt.subplot(513)
     plt.plot(gpsTimeTruthFor, interpSteeredWheelAngle, label='steering wheel angle (rad)')
     plt.legend()
 
-    plt.subplot(615)
+    plt.subplot(514)
     plt.plot(gpsTimeTruthFor, interpSteerWheelAngleRate, label='steering wheel angle rate (rad/sec)')
     plt.legend()
 
-    plt.subplot(616)
+    plt.subplot(515)
     plt.plot(gpsTimeTruthFor, interpAvgRearAxleSpeed, label='rear axle velocity (m/s)')
     plt.legend()
 
@@ -316,10 +325,11 @@ def main():
     plt.title('global x/y predictions')
     plt.scatter(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, color='green', label='novatel position (m)')
     plt.scatter(xVar_gps_theta_recursive, yVar_gps_theta_recursive, color='red', label='recrusive gps theta (m / x,y)')
+    plt.scatter(xVar_calc_theta_recursive_model, yVar_calc_theta_recursive_model, color='purple', label='recursive calc theta (m / x,y)')
+    plt.scatter(xVar_calc_theta_recursive_static, yVar_calc_theta_recursive_static, color='orange', label='static calc theta (m / x,y)')                  
     plt.scatter(xVar_calc_theta_static, yVar_calc_theta_static, color='blue', label='propagation from 0 (m / x,y)')  
-    plt.scatter(xVar_calc_theta_recursive, yVar_calc_theta_recursive, color='purple', label='recursive (m / x,y)')              
-    plt.xlim(-65,65)
-    plt.ylim(-65,65)
+    # plt.xlim(-225,225)
+    # plt.ylim(-225,225)
     plt.legend()
 
     # plt.figure(3)

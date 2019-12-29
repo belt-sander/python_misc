@@ -79,7 +79,7 @@ def main():
     plt.subplot(1,1,1)
     plt.title('gps trajectory compare')
     plt.plot(gpsLatTruth, gpsLongTruth, color='blue', label='ground truth trajectory')
-    plt.plot(gpsLatCompare, gpsLongCompare, color='red', label='compare trajectory')
+    # plt.plot(gpsLatCompare, gpsLongCompare, color='red', label='compare trajectory')
     plt.plot(gpsRgLat, gpsRgLong, color='green', label='racegrade trajectory')
     plt.ylabel("longitude (dd)")
     plt.xlabel("latitude (dd)")
