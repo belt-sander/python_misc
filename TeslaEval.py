@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 
 def parse_args():
-    arg_parser = argparse.ArgumentParser(description='convert MoTeC i2 gps time / date to posix')
+    arg_parser = argparse.ArgumentParser(description='evaluate tesla bicycle model')
     arg_parser.add_argument('-u',   '--ublox_input',                required=True,      help='ublox input file (csv) format')
     arg_parser.add_argument('-m',   '--motec_input',                required=True,      help='motec input file (csv) format')    
     arg_parser.add_argument('-f',   '--num_frames',     type=int,   required=True,      help='number of frames to process')
@@ -49,6 +49,7 @@ def main():
     thetaRecursiveCalcModel = np.zeros(((args.num_frames),1))
     thetaRecursiveCalcGlobalModel = np.zeros(((args.num_frames),1))
     thetaStaticModel = np.zeros(((args.num_frames),1))
+    thetaStaticModelGlobal = np.zeros(((args.num_frames),1))    
 
     xVariableRecursiveCalc = np.zeros(((args.num_frames),1))
     yVariableRecursiveCalc = np.zeros(((args.num_frames),1))
@@ -64,14 +65,16 @@ def main():
     yVariableStaticCalcOffset = np.zeros(((args.num_frames),1))
 
     abbrievatedUbxTime = np.zeros(((args.num_frames),1))
+    abbreviatedUbxHeading = np.zeros(((args.num_frames),1))
     abbreviatedMotionNorthing = np.zeros(((args.num_frames),1))
     abbreviatedMotionEasting = np.zeros(((args.num_frames),1))
-    abbreviatedWheelAngle = np.zeros(((args.num_frames),1))
-    abbreviatedWheelAngleModel = np.zeros(((args.num_frames),1))    
+    abbreviatedSteerWheelAngle = np.zeros(((args.num_frames),1))
+    abbreviatedSteerWheelAngleModel = np.zeros(((args.num_frames),1))    
     abbreviatedAvgAxleSpeed = np.zeros(((args.num_frames),1))
     localMotionNorthing = np.zeros(((args.num_frames),1))
     localMotionEasting = np.zeros(((args.num_frames),1))
 
+    zero = np.zeros(((args.num_frames),1))
 
     # ubx data fields
     ubxTow = ubxInput[:,1]
@@ -112,7 +115,7 @@ def main():
  
     # tuning parameters 
     speedCorrection = 1.1
-    steeringRackRatioGuess = 13.0 # guess at steering rack ratio
+    steeringRackRatioGuess = 14.2 # guess at steering rack ratio (13.78 is pretty solid)
     wheelBase = 2.95 # meters    
 
     # combine relevant data in to new column stack
@@ -133,14 +136,15 @@ def main():
 
         gpsHeadingRad[i,:] = ubx_heading * np.pi/180
         avgRearAxleSpeed[i,:] = ((lr_speed + rr_speed) / 2) * speedCorrection
-        steeredWheelAngle[i,:] = ((steer_wheel_angle / steeringRackRatioGuess) * -1)  * np.pi/180 # sign flip for right hand rule vehicle frame, 10 for mystery 10 correction?? maybe due to ratio divisor
-        steeredWheelAngleModel[i,:] = (steer_wheel_angle / ((steeringRackRatioGuess * ((-avgRearAxleSpeed[i]/8)+1)) * -1))  * np.pi/180 # sign flip for right hand rule vehicle frame, 10 for mystery 10 correction?? maybe due to ratio divisor
+        steeredWheelAngle[i,:] = ((steer_wheel_angle / steeringRackRatioGuess) * -1)  * np.pi/180 # sign flip for right hand rule vehicle frame
+        steeredWheelAngleModel[i,:] = (steer_wheel_angle / ((steeringRackRatioGuess * ((-avgRearAxleSpeed[i]/6)+1)) * -1))  * np.pi/180 # sign flip for right hand rule vehicle frame
         gpsRelativeMotionNorthing[i,:] = ubx_northing - ubxNorthing[0]
         gpsRelativeMotionEasting[i,:] = ubx_easting - ubxEasting[0]
-        # print('frame: ', i, ' avg rear speed: ', avgRearAxleSpeed[i], ' steered wheel angle: ', steeredWheelAngle[i])
+
+        # print('frame: ', i, ' avg rear speed: ', avgRearAxleSpeed[i], ' steered wheel angle: ', steeredWheelAngle[i], ' steer wheel angle direct: ', steer_wheel_angle)
 
     # combine data for vehicle model processing
-    modelData = np.column_stack((ubxTow, gpsRelativeMotionNorthing, gpsRelativeMotionEasting, gpsHeadingRad, avgRearAxleSpeed, steeredWheelAngle, steeredWheelAngleModel))
+    modelData = np.column_stack((ubxTow, gpsRelativeMotionNorthing, gpsRelativeMotionEasting, gpsHeadingRad, avgRearAxleSpeed, steeredWheelAngle, steeredWheelAngleModel, gpsHeadingRad))
 
     # theta calculation
     for i, row in enumerate(modelData):
@@ -154,23 +158,31 @@ def main():
                 avg_axle_spd = row[4]
                 rad_wheel_angle = row[5]
                 rad_wheel_angle_model = row[6]
+                ubx_heading_rad = row[7]
 
                 abbreviatedAvgAxleSpeed[t,:] = avg_axle_spd
-                abbreviatedWheelAngle[t,:] = rad_wheel_angle
-                abbreviatedWheelAngleModel[t,:] = rad_wheel_angle_model
+                abbreviatedSteerWheelAngle[t,:] = rad_wheel_angle
+                abbreviatedSteerWheelAngleModel[t,:] = rad_wheel_angle_model
                 abbrievatedUbxTime[t,:] = ubx_time
                 abbreviatedMotionNorthing[t,:] = rel_northing
                 abbreviatedMotionEasting[t,:] = rel_easting
+                
+                if (ubx_heading_rad > (270 * np.pi/180)):
+                    abbreviatedUbxHeading[t,:] = ((ubx_heading_rad * -1) + (360 * np.pi/180) + (90 * np.pi/180))
+                else:
+                    abbreviatedUbxHeading[t,:] = (ubx_heading_rad * -1) + (90 * np.pi/180)
 
                 thetaRecursiveCalc[t,:] = ((avg_axle_spd/wheelBase) * (np.tan(rad_wheel_angle)) * (0.1)) + thetaRecursiveCalc[t-1]
                 thetaRecursiveCalcModel[t,:] = ((avg_axle_spd/wheelBase) * (np.tan(rad_wheel_angle_model)) * (0.1)) + thetaRecursiveCalc[t-1]
-                thetaStaticModel[t,:] = ((avgRearAxleSpeed[args.start_frame]/wheelBase) * (np.tan(steeredWheelAngle[args.start_frame]*10) * (0.1)) + thetaStaticModel[t-1])
-                print(' rear axle speed: ', abbreviatedAvgAxleSpeed[t], ' wheel angle: ', abbreviatedWheelAngle[t]*180/np.pi, ' wheel angle model: ', abbreviatedWheelAngleModel[t]*180/np.pi, ' theta static model: ', thetaStaticModel[t]*180/np.pi, ' theta recur model: ', thetaRecursiveCalcModel[t]*180/np.pi, ' speed at args start: ', avgRearAxleSpeed[args.start_frame], ' sa at args start (rad): ', steeredWheelAngle[args.start_frame]*10)    
+                thetaStaticModel[t,:] = ((avgRearAxleSpeed[args.start_frame]/wheelBase) * (np.tan(steeredWheelAngle[args.start_frame]) * (0.1)) + thetaStaticModel[t-1])
+                
+                # print(' rear axle speed: ', abbreviatedAvgAxleSpeed[t], ' wheel angle: ', abbreviatedSteerWheelAngle[t]*180/np.pi, ' wheel angle model: ', abbreviatedSteerWheelAngleModel[t]*180/np.pi, ' theta static model: ', thetaStaticModel[t]*180/np.pi, ' theta recur model: ', thetaRecursiveCalcModel[t]*180/np.pi, ' speed at args start: ', avgRearAxleSpeed[args.start_frame], ' sa at args start (rad): ', steeredWheelAngle[args.start_frame]*10)    
 
     # global correction
     thetaRecursiveCalcGlobal = thetaRecursiveCalc - gpsHeadingRad[args.start_frame] + (90 * (np.pi/180))
     thetaRecursiveCalcGlobalModel = thetaRecursiveCalcModel - gpsHeadingRad[args.start_frame] + (90 * (np.pi/180))
-    thetaStaticModel = thetaStaticModel - gpsHeadingRad[args.start_frame] + (90 + (np.pi/180))
+    thetaStaticModelGlobal = thetaStaticModel - gpsHeadingRad[args.start_frame] + (90 * (np.pi/180))
+    thetaUbxHeadingGlobal = abbreviatedUbxHeading - gpsHeadingRad[args.start_frame] + (90 * (np.pi/180))
     
     # local correction
     localMotionNorthing = abbreviatedMotionNorthing - gpsRelativeMotionNorthing[args.start_frame]
@@ -182,9 +194,10 @@ def main():
         yVariableRecursiveCalc[t,:] = (abbreviatedAvgAxleSpeed[t] * (np.sin(thetaRecursiveCalcGlobal[t])) * (0.1)) + (yVariableRecursiveCalc[t-1])
         xVariableRecursiveCalcModel[t,:] = (abbreviatedAvgAxleSpeed[t] * (np.cos(thetaRecursiveCalcGlobalModel[t])) * (0.1)) + (xVariableRecursiveCalcModel[t-1])
         yVariableRecursiveCalcModel[t,:] = (abbreviatedAvgAxleSpeed[t] * (np.sin(thetaRecursiveCalcGlobalModel[t])) * (0.1)) + (yVariableRecursiveCalcModel[t-1])
-        xVariableStaticCalc[t,:] = (abbreviatedAvgAxleSpeed[0] * (np.cos(thetaStaticModel[t])) * (0.1)) + (xVariableStaticCalc[t-1])
-        yVariableStaticCalc[t,:] = (abbreviatedAvgAxleSpeed[0] * (np.sin(thetaStaticModel[t])) * (0.1)) + (xVariableStaticCalc[t-1])        
-        # print('frame: ', t, ' x: ', xVariableRecursiveCalc[t], ' y: ', yVariableRecursiveCalc[t], ' x model: ', xVariableRecursiveCalcModel[t], ' y model: ', yVariableRecursiveCalcModel[t])   
+        xVariableStaticCalc[t,:] = (abbreviatedAvgAxleSpeed[0] * (np.cos(thetaStaticModelGlobal[t])) * (0.1)) + (xVariableStaticCalc[t-1])
+        yVariableStaticCalc[t,:] = (abbreviatedAvgAxleSpeed[0] * (np.sin(thetaStaticModelGlobal[t])) * (0.1)) + (yVariableStaticCalc[t-1])        
+
+        # print('frame: ', t, ' x: ', xVariableRecursiveCalc[t], ' y: ', yVariableRecursiveCalc[t], ' x model: ', xVariableRecursiveCalcModel[t], ' y model: ', yVariableRecursiveCalcModel[t], ' x static: ', xVariableStaticCalc[t], ' y static: ', yVariableStaticCalc[t])   
 
     xVariableRecursiveCalcOffset = xVariableRecursiveCalc - xVariableRecursiveCalc[0]
     yVariableRecursiveCalcOffset = yVariableRecursiveCalc - yVariableRecursiveCalc[0]
@@ -203,8 +216,7 @@ def main():
     plt.legend()
 
     plt.subplot(412)
-    # plt.plot(ubxTow, InterpSteeringWheelAngle, label='steering wheel angle (deg)')
-    plt.plot(ubxTow, steeredWheelAngle, label='steeredWheelAngle (rad)')
+    plt.plot(ubxTow, steeredWheelAngle, label='front wheel angle (rad)')
     plt.legend()
 
     plt.subplot(413)
@@ -220,13 +232,15 @@ def main():
 
     plt.figure(2)
     plt.subplot(311)
-    plt.plot(abbrievatedUbxTime, abbreviatedWheelAngle, label='wheel angle (rad)')
-    plt.plot(abbrievatedUbxTime, abbreviatedWheelAngleModel, label='wheel angle model (rad)')
+    # plt.plot(abbrievatedUbxTime, abbreviatedSteerWheelAngleModel, label='steer wheel angle model (rad)')
+    plt.plot(abbrievatedUbxTime, abbreviatedSteerWheelAngle, label='steer wheel angle (rad)')
     plt.legend()
 
     plt.subplot(312)
-    plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobal, label='theta global (rad)')
-    plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobalModel, label='theta global model (rad)')
+    # plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobalModel * 180/np.pi, label='theta global model (deg)')
+    plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobal * 180/np.pi, label='theta global (deg)')
+    plt.plot(abbrievatedUbxTime, abbreviatedUbxHeading * 180/np.pi, label='ubx heading (deg)')
+    plt.plot(abbrievatedUbxTime, zero)
     plt.legend()
 
     plt.subplot(313)
@@ -243,8 +257,8 @@ def main():
     plt.grid(b=True)    
     plt.scatter(localMotionNorthing, localMotionEasting, s=25, c=abbrievatedUbxTime, label='local motion (m)')
     plt.scatter(xVariableRecursiveCalcOffset, yVariableRecursiveCalcOffset,  color='orange', label='prediction recursive static ratio (m)')
-    plt.scatter(xVariableRecursiveCalcModelOffset, yVariableRecursiveCalcModelOffset, color='blue', label='prediction recursive vel model(m)')
-    plt.scatter(xVariableStaticCalcOffset, yVariableStaticCalcOffset, color='green', label='static t0 model (m)')    
+    # plt.scatter(xVariableRecursiveCalcModelOffset, yVariableRecursiveCalcModelOffset, color='blue', label='prediction recursive vel model(m)')
+    # plt.scatter(xVariableStaticCalcOffset, yVariableStaticCalcOffset, color='green', label='static t0 model (m)')    
     plt.legend()
 
     plt.show()
