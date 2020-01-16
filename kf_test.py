@@ -7,7 +7,7 @@ from pykalman import KalmanFilter
 rnd = np.random.RandomState(0)
 
 # generate a noisy sine wave to act as our fake observations
-n_timesteps = 101
+n_timesteps = 1000
 x = np.linspace(0, 3 * np.pi, n_timesteps)
 observations = 20 * (np.sin(x) + 0.5 * rnd.randn(n_timesteps))
 
@@ -24,7 +24,6 @@ print('fitted model: {0}'.format(kf))
 
 # Plot lines for the observations without noise, the estimated position of the
 # target before fitting, and the estimated position after fitting.
-
 plt.style.use('dark_background')
 
 plt.figure(figsize=(16, 6))
@@ -36,16 +35,6 @@ position_line = plt.plot(x, states_pred[:, 0],
 # velocity_line = plt.plot(x, states_pred[:, 1],
 #                         linestyle='-', marker='o', color='g',
 #                         label='velocity est.')
-savgol_line_1 = plt.plot(x, (savgol_filter(observations,55,1)), 
-						label='savgol filter 555')
-savgol_line_2 = plt.plot(x, (savgol_filter(observations,41,1)), 
-						label='savgol filter 441')
-savgol_line_3 = plt.plot(x, (savgol_filter(observations,33,1)), 
-						label='savgol filter 333')
-savgol_line_4 = plt.plot(x, (savgol_filter(observations,21,1)), 
-						label='savgol filter 221')
-savgol_line_5 = plt.plot(x, (savgol_filter(observations,11,1)), 
-						label='savgol filter 111')
 plt.legend(loc='lower right')
 plt.xlim(xmin=0, xmax=x.max())
 plt.xlabel('time')
