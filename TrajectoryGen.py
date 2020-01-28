@@ -2,6 +2,7 @@
 
 #!/usr/bin/python
 
+from __future__ import print_function
 import time
 import csv
 import argparse
@@ -24,14 +25,6 @@ def parse_args():
                             '--truthOutput',
                             required=False,
                             help='truth output trajectory file location')
-    arg_parser.add_argument('-co',
-                            '--compareOutput',
-                            required=False,
-                            help='compare output trajectory file location')
-    arg_parser.add_argument('-corg',
-                            '--compareOutputRg',
-                            required=False,
-                            help='compare output trajectory file location')
 
     return arg_parser.parse_args()
 
@@ -39,47 +32,43 @@ def main():
     args = parse_args() 
     truth = np.genfromtxt(args.truthTrajectory, skip_header=40, skip_footer=40, delimiter='')
     compare = np.genfromtxt(args.compareTrajectory, skip_header=1, delimiter='')
-    print("")
-    print("data has been imported")
     
     num_truth_poses = np.size(truth, 0)
     num_compare_poses = np.size(compare, 0)
 
-    print("")
+    print()
     print("num truth poses: ", num_truth_poses)
     print("num compare poses: ", num_compare_poses)
-    
+    print()
+
     gpsTimeTruth = truth[:,0]
     gpsLatTruth = truth[:,1]
     gpsLongTruth = truth[:,2]
     gpsHeadingTruth = truth[:,13]
 
     gpsTimeCompare = compare[:,0]
-    gpsLatCompare = compare[:,21]
-    gpsLongCompare = compare[:,22]
-    gpsRgLat = compare[:,23]
-    gpsRgLong = compare[:,24]
+    gpsRgLat = compare[:,17]
+    gpsRgLong = compare[:,18]
+
+    print('time: ', gpsTimeTruth)
+    print('lat novatel: ', gpsLatTruth)
+    print('lon novatel: ', gpsLongTruth)
+    print()
+    print('time: ', gpsTimeCompare)
+    print('lat rg: ', gpsRgLat)
+    print('lon rg: ', gpsRgLong)
+    print()
+    print('time error (minutes): ', (gpsTimeTruth[100]-gpsTimeCompare[100])/60)
+    print()
 
     if args.truthOutput is not None:
         dataOutputTruth = np.column_stack((gpsTimeTruth,gpsLatTruth,gpsLongTruth,gpsHeadingTruth))
         np.savetxt(args.truthOutput, dataOutputTruth, fmt='%.9f', delimiter=',')
         np.savetxt(args.truthOutput, dataOutputTruth, fmt='%.9f', delimiter=' ', header="# gps time (s), gps latitude (dd), gps longitude (dd), heading (deg)", comments='')
-    if args.compareOutput is not None:    
-        dataOutputCompare = np.column_stack((gpsTimeCompare,gpsLatCompare,gpsLongCompare))
-        np.savetxt(args.compareOutput, dataOutputCompare, fmt='%.9f', delimiter=',')
-        # np.savetxt(args.compareOutput, dataOutputCompare, fmt='%.9f', delimiter=' ', header="# gps time (s), gps latitude (dd), gps longitude (dd)", comments='')
-    if args.compareOutputRg is not None:
-        dataOutputCompareRg = np.column_stack((gpsTimeCompare,gpsRgLat,gpsRgLong))
-        np.savetxt(args.compareOutputRg, dataOutputCompareRg, fmt='%.9f', delimiter=',')
-
-    print("")
-    print("data has been exported")
-    print("")
 
     plt.subplot(1,1,1)
     plt.title('gps trajectory compare')
     plt.plot(gpsLatTruth, gpsLongTruth, color='blue', label='ground truth trajectory')
-    # plt.plot(gpsLatCompare, gpsLongCompare, color='red', label='compare trajectory')
     plt.plot(gpsRgLat, gpsRgLong, color='green', label='racegrade trajectory')
     plt.ylabel("longitude (dd)")
     plt.xlabel("latitude (dd)")

@@ -12,350 +12,254 @@ from scipy.signal import savgol_filter
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='vehicle prediction experiment')
-    arg_parser.add_argument('-v',   '--vehicleData',                           required=True,      help='output from MoTeCGPSTimeConvert.py')
-    arg_parser.add_argument('-n',   '--novatelTrajectory',                     required=True,      help='novatel output from TrajectoryGen.py')
-    arg_parser.add_argument('-nss', '--numStartingFramesSkipped',   type=int,  required=True,      help='number of frames to skip at beginning of novatel data')
-    arg_parser.add_argument('-numf','--numFrames',                  type=int,  required=True,      help='number of rows to use in novatel data')
-    arg_parser.add_argument('-to',  '--trajectoryOutput',                      required=False,     help='time aligned data output from vehicle and novatel')
+    arg_parser.add_argument('-v', '--vehicleData', required=True, help='output from MoTeCGPSTimeConvert.py')
+    arg_parser.add_argument('-n', '--novatelTrajectory', required=True, help='novatel post processed data (session.txt)')
     return arg_parser.parse_args()
 
-def main():
+def tuning():
+    # tuning parameters for 2017 Honda Civic
+    steering_ratio = 10.98 # ratio
+    steering_offset = 1.1 # degrees
+    wheel_base = 2.7 # meters 106.3 inches
+    track_width = 1.5621 # meters 61.5 inches rear  
+    rack_scalar = -1.0 # ratio
+    speed_scalar = 0.98 # ratio
+
+    return steering_ratio, steering_offset, wheel_base, track_width, rack_scalar, speed_scalar
+
+def novatel_data():
     args = parse_args() 
-    truth = np.genfromtxt(args.novatelTrajectory, skip_header=args.numStartingFramesSkipped, delimiter=' ')
-    vehicle = np.genfromtxt(args.vehicleData, skip_header=1, skip_footer=1, delimiter=' ')
+    truth = np.genfromtxt(args.novatelTrajectory, skip_header=50, skip_footer=50, delimiter='')
 
-    print('')
-    print('data has been imported')
+    # parse novatel data
+    gps_time_truth = np.zeros((len(truth),1))
+    gps_northing_truth = np.zeros((len(truth),1))
+    gps_easting_truth = np.zeros((len(truth),1))
+    gps_heading_truth = np.zeros((len(truth),1))
+    calc_heading_offset = np.zeros((len(truth),1))
+    gps_body_vel_x = np.zeros((len(truth),1))
+    gps_body_vel_y = np.zeros((len(truth),1))
+    gps_body_vel_z = np.zeros((len(truth),1))
 
-    print('')
-    print('vehicle size: ', np.size(vehicle))
-    print('')
-    print('truth size: ', np.size(truth))
-
+    # LLA to UTM conversion
     myProjTruth = Proj("+proj=utm +zone=10S, +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
-
     print('')
     print('converting truth lla to UTM...')
     print('')
 
-    zero = np.zeros((args.numFrames,1))
-    gpsNorthingTruth = np.zeros((args.numFrames,1))
-    gpsEastingTruth = np.zeros((args.numFrames,1))
-    gpsTimeTruthFor = np.zeros((args.numFrames,1))
-    gpsHeadingTruthFor = np.zeros((args.numFrames,1))
-    calcVelNorth = np.zeros((args.numFrames,1))
-    calcVelEast = np.zeros((args.numFrames,1))
-    calcVelNorthFiltered = np.zeros((args.numFrames,1))
-    calcVelEastFiltered = np.zeros((args.numFrames,1))
-    calcVelBodyForward = np.zeros((args.numFrames,1))
-    calcVelBodyLateral = np.zeros((args.numFrames,1))   
-    calcHeadingOffset = np.zeros((args.numFrames,1))
-    calcPosBodyForward = np.zeros((args.numFrames,1))
-    calcPosBodyLateral = np.zeros((args.numFrames,1))
-
-    gpsTimeVehicleFor = np.zeros((len(vehicle),1))
-    steerWheelAngleFor = np.zeros((len(vehicle),1))
-    steeringRackAngleFor = np.zeros((len(vehicle),1))
-    vnAccelXFor = np.zeros((len(vehicle),1))
-    vnAccelYFor = np.zeros((len(vehicle),1))
-    avgSpeedFor = np.zeros((len(vehicle),1))
-    avgRearAxleSpeedFor = np.zeros((len(vehicle),1))
-    pathRadius = np.zeros((len(vehicle),1))
-    wheelBaseFor = np.zeros((len(vehicle),1))
-    trackWidthFor = np.zeros((len(vehicle),1))
-    wheelSpeedFLFor = np.zeros((len(vehicle),1))
-    wheelSpeedFRFor = np.zeros((len(vehicle),1))
-    wheelSpeedRLFor = np.zeros((len(vehicle),1))
-    wheelSpeedRRFor = np.zeros((len(vehicle),1))
-
-    xVar_calc_theta_a = np.zeros((args.numFrames,1))
-    yVar_calc_theta_a = np.zeros((args.numFrames,1))
-    xVar_gps_theta_a = np.zeros((args.numFrames,1))
-    yVar_gps_theta_a = np.zeros((args.numFrames,1))
-
-    xVar_calc_theta_static = np.zeros((args.numFrames,1))
-    yVar_calc_theta_static = np.zeros((args.numFrames,1))
-    xVar_calc_theta_recursive_model = np.zeros((args.numFrames,1))
-    yVar_calc_theta_recursive_model = np.zeros((args.numFrames,1))    
-    xVar_calc_theta_recursive_static = np.zeros((args.numFrames,1))
-    yVar_calc_theta_recursive_static = np.zeros((args.numFrames,1))        
-    xVar_gps_theta_recursive = np.zeros((args.numFrames,1))
-    yVar_gps_theta_recursive = np.zeros((args.numFrames,1)) 
-
-    theta_relative_static = np.zeros((args.numFrames,1))
-    theta_reltaive_static_correction = np.zeros((args.numFrames,1))
-    theta_relative_recursive_model = np.zeros((args.numFrames,1))
-    theta_relative_recursive_static = np.zeros((args.numFrames,1))        
-    theta_relative_recursive_correction = np.zeros((args.numFrames,1))
-    theta_global = np.zeros((args.numFrames,1))
-
-    phi = np.zeros((args.numFrames,1))
-    rearAxleVel = np.zeros((args.numFrames,1))
-    gpsNorthingRelativeTruth = np.zeros((args.numFrames,1))
-    gpsEastingRelativeTruth = np.zeros((args.numFrames,1))
-    gpsHeadingRelative = np.zeros((args.numFrames,1))
-    gpsHeadingAbsolute = np.zeros((args.numFrames,1))
-    steeringRackAngle = np.zeros((len(vehicle),1))
-    steeringRackAngleModel = np.zeros((len(vehicle),1))
-    steeringWheelAngleRate = np.zeros((len(vehicle),1))
-
-    error_gps_x = np.zeros((args.numFrames,1))
-    error_gps_y = np.zeros((args.numFrames,1))
-    error_theta_static_x = np.zeros((args.numFrames,1))
-    error_theta_static_y = np.zeros((args.numFrames,1))
-    error_theta_recursive_x = np.zeros((args.numFrames,1))
-    error_theta_recursive_y = np.zeros((args.numFrames,1))
-
-    gpsTimeTruth = truth[:,0]
-    gpsLatTruth = truth[:,1]
-    gpsLongTruth = truth[:,2]
-    gpsHeadingTruth = truth[:,3]
-
-    # parse novatel data
     for aa, row in enumerate(truth):
-        if aa <= (args.numFrames - 1):
-            gpsTimeTruth = row[0]
-            gpsLatTruth = row[1]
-            gpsLongTruth = row[2]
-            gpsHeadingTruth = row[3]-2.84  ### IMPORTANT: this is to offset the imperfect installation of the IMU in the Honda
-            
-            # convert from -180 to 180 to 0 to 360
-            if gpsHeadingTruth < 0:
-                calcHeadingOffset[aa,: ] = (gpsHeadingTruth + 360) * np.pi/180
-            else:
-                calcHeadingOffset[aa,: ] = (gpsHeadingTruth) * np.pi/180
+        _gps_time_truth = row[0]
+        _gps_lat_truth = row[1]
+        _gps_long_truth = row[2]
+        _gps_heading_truth = row[13]-2.84  ### IMPORTANT: this is to offset the imperfect installation of the IMU in the Honda
+        _gps_body_vel_x = row[19]
+        _gps_body_vel_y = row[20]
+        _gps_body_vel_z = row[21]
 
-            utmETruth,utmNTruth = myProjTruth(gpsLongTruth,gpsLatTruth)
-            gpsTimeTruthFor[aa,: ] = gpsTimeTruth
-            gpsNorthingTruth[aa,: ] = utmNTruth
-            gpsEastingTruth[aa,: ] = utmETruth 
-            gpsHeadingTruthFor[aa,: ] = gpsHeadingTruth
+        # convert from -180 to 180 to 0 to 360
+        if _gps_heading_truth < 0:
+            calc_heading_offset[aa,: ] = (_gps_heading_truth + 360) * np.pi/180
+        else:
+            calc_heading_offset[aa,: ] = (_gps_heading_truth) * np.pi/180
+
+        _utm_e_truth, _utm_n_truth = myProjTruth(_gps_long_truth,_gps_lat_truth)
+        gps_time_truth[aa,: ] = _gps_time_truth
+        gps_northing_truth[aa,: ] = _utm_n_truth
+        gps_easting_truth[aa,: ] = _utm_e_truth 
+        gps_heading_truth[aa,: ] = _gps_heading_truth
+        gps_body_vel_x[aa,:] = _gps_body_vel_x
+        gps_body_vel_y[aa,:] = _gps_body_vel_y
+        gps_body_vel_z[aa,:] = _gps_body_vel_z
+
+    return gps_time_truth, gps_northing_truth, gps_easting_truth, gps_heading_truth, gps_body_vel_x, gps_body_vel_y, gps_body_vel_z
+
+
+def vehicle_data():
+    args = parse_args() 
+    vehicle = np.genfromtxt(args.vehicleData, skip_header=1, skip_footer=1, delimiter=' ')
 
     # parse vehicle data
+    vn_accel_x = np.zeros((len(vehicle),1))
+    vn_accel_y = np.zeros((len(vehicle),1))
+    vn_accel_z = np.zeros((len(vehicle),1))
+    avg_rear_axle_speed = np.zeros((len(vehicle),1))
+    gps_time_vehicle = np.zeros((len(vehicle),1))
+    steering_wheel_angle = np.zeros((len(vehicle),1))
+    wheel_speed_fl = np.zeros((len(vehicle),1))
+    wheel_speed_fr = np.zeros((len(vehicle),1))
+    wheel_speed_rl = np.zeros((len(vehicle),1))
+    wheel_speed_rr = np.zeros((len(vehicle),1))
+
     for i, row in enumerate(vehicle):
-        gpsTimeVehicle = row[0]
-        steerWheelAngle = row[9]
-        vnAccelX = row[19]
-        vnAccelY = row[20]
-        spdFL = row[5]
-        spdFR = row[6]
-        spdRL = row[7]
-        spdRR = row[8]
-        wheelBase = 106.3 # inches
-        trackWidth = 61.5 # inches rear
+        _gps_time_vehicle = row[0]
+        _steer_wheel_angle = row[5]
+        _vn_accel_x = row[10]
+        _vn_accel_y = row[11]
+        _vn_accel_z = row[12]
+        _wheel_speed_fl = row[1]
+        _wheel_speed_fr = row[2]
+        _wheel_speed_rl = row[3]
+        _wheel_speed_rr = row[4]
 
-        vnAccelXFor[i,:] = vnAccelX
-        vnAccelYFor[i,:] = vnAccelY
-        avgSpeedFor[i,:] = (spdFL+spdRR+spdFR+spdRL)/4 # speed at COG
-        avgRearAxleSpeedFor[i,:] = (spdRR+spdRL)/2 # speed at center of rear axle
-        wheelBaseFor[i,:] = wheelBase
-        trackWidthFor[i,:] = trackWidth 
-        gpsTimeVehicleFor[i,:] = gpsTimeVehicle
-        steerWheelAngleFor[i,:] = steerWheelAngle
-        wheelSpeedFLFor[i,:] = spdFL
-        wheelSpeedFRFor[i,:] = spdFR
-        wheelSpeedRLFor[i,:] = spdRL
-        wheelSpeedRRFor[i,:] = spdRR
+        vn_accel_x[i,:] = _vn_accel_x
+        vn_accel_y[i,:] = _vn_accel_y
+        vn_accel_z[i,:] = _vn_accel_z
+        avg_rear_axle_speed[i,:] = (_wheel_speed_rl+_wheel_speed_rr)/2 # speed at center of rear axle
+        gps_time_vehicle[i,:] = _gps_time_vehicle
+        steering_wheel_angle[i,:] = _steer_wheel_angle
+        wheel_speed_fl[i,:] = _wheel_speed_fl
+        wheel_speed_fr[i,:] = _wheel_speed_fr
+        wheel_speed_rl[i,:] = _wheel_speed_rl
+        wheel_speed_rr[i,:] = _wheel_speed_rr
 
-        # vehicle model calculations
-        steeringRackAngleFor[i,:] = steerWheelAngle / 10.98 # steering ratio specified by Honda
+    return gps_time_vehicle, wheel_speed_fl, wheel_speed_fr, wheel_speed_rl, wheel_speed_rr, steering_wheel_angle, vn_accel_x
 
-    # derivative of position to get North and East velocity
-    calcVelNorth = np.gradient(np.reshape(gpsNorthingTruth, args.numFrames)) * 100.0 # unsure why the 100.0 scalar (maybe because 100hz sample rate?)    
-    calcVelEast = np.gradient(np.reshape(gpsEastingTruth, args.numFrames)) * 100.0 # unsure why the 100.0 scalar? (maybe because 100hz sample rate?)
-  
-    # calculate steering angle rate
-    calcSteerWheelRate = np.gradient(np.reshape(steerWheelAngleFor, len(vehicle)))
 
-    # time alignment / interpolation from vehicle data to novatel time 
-    gpsTimeVehicleArr = np.resize(gpsTimeVehicleFor, np.size(gpsTimeVehicleFor))
-    # steering wheel
-    steerWheelAngleArr = np.resize(steerWheelAngleFor, np.size(steerWheelAngleFor))
-    interpSteeredWheelAngle = (np.interp(gpsTimeTruthFor, gpsTimeVehicleArr, steerWheelAngleArr)) * np.pi/180
-    # steering rack
-    steeringRackAngleArr = np.resize(steeringRackAngleFor, np.size(steeringRackAngleFor))
-    interpSteeringRackAngle = (np.interp(gpsTimeTruthFor, gpsTimeVehicleArr, steeringRackAngleArr)) * np.pi/180
-    # steering angle rate
-    steerWheelAngleRateArr = np.resize(calcSteerWheelRate, np.size(calcSteerWheelRate))
-    interpSteerWheelAngleRate = (np.interp(gpsTimeTruthFor, gpsTimeVehicleArr, steerWheelAngleRateArr)) * np.pi/180
+def main():
+    tuning_values = tuning()
+    vehicle_state = vehicle_data()
+    novatel_state = novatel_data()
 
-    # experiment speed scalar / used for resoloving error in novatel velocity vs honda reported velocity
-    hondaVelCorrection = 0.98
+    evaluation_gps_time = np.resize(vehicle_state[0], np.size(vehicle_state[0]))
+    steering_wheel_angle = np.resize(vehicle_state[5], np.size(vehicle_state[5])) 
+    steering_rack_angle = np.resize((vehicle_state[5] + tuning_values[1] * tuning_values[4]) / tuning_values[0], np.size(vehicle_state[5]))        # (steering wheel angle + steering wheel offset) / steering ratio
+    avg_rear_axle_speed = np.resize(((vehicle_state[3] + vehicle_state[4]) * tuning_values[5] / 2), np.size(vehicle_state[0]))  # (rear left wheel speed + rear right wheel speed * speed scalar) / 2
+    wheel_speed_fl = np.resize(vehicle_state[1], np.size(vehicle_state[1]))
+    wheel_speed_fr = np.resize(vehicle_state[2], np.size(vehicle_state[2]))
+    wheel_speed_rl = np.resize(vehicle_state[3], np.size(vehicle_state[3]))
+    wheel_speed_rr = np.resize(vehicle_state[4], np.size(vehicle_state[4]))
 
-    # avg speed
-    avgSpeedArr = np.resize(avgSpeedFor, np.size(avgSpeedFor)) * hondaVelCorrection
-    interpAvgSpeed = np.interp(gpsTimeTruthFor, gpsTimeVehicleArr, avgSpeedArr)
-    # avg rear axle speed
-    avgRearAxleSpeedArr = np.resize(avgRearAxleSpeedFor, np.size(avgRearAxleSpeedFor)) * hondaVelCorrection
-    interpAvgRearAxleSpeed = np.interp(gpsTimeTruthFor, gpsTimeVehicleArr, avgRearAxleSpeedArr)
+    # used to evaluate data latency
+    calc_forward_accel = np.gradient(avg_rear_axle_speed) * 100.0 # multiplier due to sample rate at 100hz
+    filter_calc_forward_accel = savgol_filter(calc_forward_accel, 49, 1) 
+    forward_accel = np.resize(vehicle_state[6], np.size(vehicle_state[6]))
 
-    # new array with data from novatel and vehicle for next for loop
-    combinedData = np.column_stack((gpsTimeTruthFor,gpsNorthingTruth,gpsEastingTruth, calcHeadingOffset,calcVelNorth,calcVelEast,interpAvgRearAxleSpeed,interpSteeringRackAngle,interpSteeredWheelAngle, interpSteerWheelAngleRate))
-    # write output to text file
-    if args.trajectoryOutput is not None:
-        np.savetxt(args.novatelTrajectoryOutput, dataOutputTruth, fmt='%.9f', delimiter=' ', header="# gps time (s), gps N UTM, gps E UTM, heading(rad), north velocity (m/s), east vel (m/s), rear axle speed (m/s), front wheel angle (rad), steering wheel angle (rad), steering wheel angle rate (rad/sec)", comments='')
+    # putting vehicle state data in the novatel state data time reference
+    interp_steering_wheel_angle = np.interp(novatel_state[0], evaluation_gps_time, steering_wheel_angle)
+    interp_avg_rear_axle_speed = np.interp(novatel_state[0], evaluation_gps_time, avg_rear_axle_speed)
+    interp_forward_accel = np.interp(novatel_state[0], evaluation_gps_time, forward_accel)
+    interp_calc_forward_accel = np.interp(novatel_state[0], evaluation_gps_time, calc_forward_accel)
+    interp_filter_calc_forward_accel = np.interp(novatel_state[0], evaluation_gps_time, filter_calc_forward_accel)
+    interp_wheel_speed_fl = np.interp(novatel_state[0], evaluation_gps_time, wheel_speed_fl)
+    interp_wheel_speed_fr = np.interp(novatel_state[0], evaluation_gps_time, wheel_speed_fr)
+    interp_wheel_speed_rl = np.interp(novatel_state[0], evaluation_gps_time, wheel_speed_rl)
+    interp_wheel_speed_rr = np.interp(novatel_state[0], evaluation_gps_time, wheel_speed_rr)
+    interp_steering_rack_angle = np.interp(novatel_state[0], evaluation_gps_time, steering_rack_angle) 
 
-    # theta calculation
-    for i, row in enumerate(combinedData):
-        # tuning parameters
-        wheelBase = 2.7 # 106.3 inches
-        trackWidth = 1.5621 # 61.5 inches rear  
-        rackScalar = 1
+    # relative novatel position
+    gps_northing = novatel_state[1]
+    gps_easting = novatel_state[2]
+    relative_gps_northing = gps_northing - gps_northing[0]
+    relative_gps_easting = gps_easting - gps_easting[0]
 
-        gpstimeTruthOutput = row[0]
-        gpsNorthingTruthOutput = row[1] 
-        gpsEastingTruthOutput = row[2] 
-        calcHeadingOffsetOutput = row[3]
-        calcVelNorthOutput = row[4]
-        calcVelEastOutput = row[5]
-        calcRearAxleVel = row[6]
-        calcSteerRackAngleModel = (row[7] * ((-0.030*calcRearAxleVel)+1)) # derived function for Honda ONLY!!        
-        calcSteerRackAngle = row[7] * rackScalar
-        calcSteerWheelAngle = row[8]
-        calcSteerWheelAngleRate = row[9]
+    # relative novatel heading
+    gps_heading = novatel_state[3] * np.pi/180
+    relative_gps_heading = gps_heading - gps_heading[0]
 
-        # output rear axle velocity and steer rack angle
-        rearAxleVel[i,:] = calcRearAxleVel      
-        steeringRackAngle[i,:] = calcSteerRackAngle  
-        steeringRackAngleModel[i,:] = calcSteerRackAngleModel
-        steeringWheelAngleRate[i,:] = calcSteerWheelAngleRate
 
-        # novatel heading to relative
-        gpsHeadingRelative[i,:] = calcHeadingOffsetOutput - calcHeadingOffset[0]
+    ### theta calculation ###
+    theta = np.zeros((len(novatel_state[0]),1))
+    theta_global = np.zeros((len(novatel_state[0]),1))
+    theta_error_uncorrected = np.zeros((len(novatel_state[0]),1))
+    theta_error_corrected = np.zeros((len(novatel_state[0]),1))
+    relative_gps_heading_corrected = np.zeros((len(novatel_state[0]),1))
+    zero = np.zeros((len(novatel_state[0]),1))
 
-        # novatel heading absolute
-        gpsHeadingAbsolute[i,:] = calcHeadingOffsetOutput
+    combined_data = np.column_stack((novatel_state[0], interp_avg_rear_axle_speed, 
+                                    interp_steering_rack_angle, relative_gps_northing, 
+                                    relative_gps_easting, relative_gps_heading))
+    for i, row in enumerate(combined_data):
+        _time = row[0]
+        _speed = row[1]
+        _rack_angle = row[2]
+        _rel_gps_northing = row[3]
+        _rel_gps_easting = row[4]
+        _rel_gps_heading = row[5]
+        _wheel_base = tuning_values[2]
 
-        # novatel global to body velocity
-        calcVelBodyForward[i,:] = (np.sin(calcHeadingOffsetOutput)*calcVelEastOutput + np.cos(calcHeadingOffsetOutput)*calcVelNorthOutput)
-        calcVelBodyLateral[i,:] = (np.cos(calcHeadingOffsetOutput)*calcVelEastOutput + (-np.sin(calcHeadingOffsetOutput)*calcVelNorthOutput))
-         
-        # novatel global to relative position
-        gpsNorthingRelativeTruth[i,:] = gpsNorthingTruthOutput - gpsNorthingTruth[0]
-        gpsEastingRelativeTruth[i,:] = gpsEastingTruthOutput - gpsEastingTruth[0]
+        ### theta ###
+        dt = (i * 0.01)
+        theta[i,:] = (_speed/_wheel_base) * (np.tan(_rack_angle * np.pi/180)) * 0.01 + theta[i-1]
 
-        # theta  
-        dt = (i*0.01)
-        theta_relative_static[i,:] =    ((rearAxleVel[0]/wheelBase) * (np.tan(steeringRackAngle[0])) * (0.01)) + theta_relative_static[i-1] 
-        theta_relative_recursive_model[i,:] = ((calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngleModel)) * (0.01)) + theta_relative_recursive_model[i-1] #+ calcHeadingOffset[0]
-        theta_relative_recursive_static[i,:] = ((calcRearAxleVel/wheelBase) * (np.tan(calcSteerRackAngle)) * (0.01)) + theta_relative_recursive_static[i-1] #+ calcHeadingOffset[0]
-        theta_global[i,:] =             (rearAxleVel[0]/wheelBase) * (np.tan(steeringRackAngle[0])) * (0.01) + theta_global[i-1] + calcHeadingOffset[0]
-
-    # theta global correction
-    theta_relative_static_correction = theta_relative_static + calcHeadingOffset[0]
-    theta_relative_recursive_correction = theta_relative_recursive_model + calcHeadingOffset[0]
-    theta_relative_static_correction = theta_relative_recursive_static + calcHeadingOffset[0]        
-
-    # relative position integration
-    calcPosBodyForward = np.cumsum(calcVelBodyForward) * 0.01
-    calcPosBodyLateral = np.cumsum(calcVelBodyLateral) * 0.01
-
-    # prediction calculation A
-    predTime_a = 0
-    startSample_a = 0
-    for predTime_a in range(args.numFrames):
-        predTime_a + 1
-        # print('pred time: ', predTime*0.01)
-        xVar_gps_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.cos(gpsHeadingAbsolute[startSample_a])) * (0.01) + (xVar_gps_theta_a[predTime_a-1])
-        yVar_gps_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.sin(gpsHeadingAbsolute[startSample_a])) * (0.01) + (yVar_gps_theta_a[predTime_a-1])      
-        xVar_calc_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.cos(theta_global[startSample_a])) * (0.01) + (xVar_calc_theta_a[predTime_a-1]) 
-        yVar_calc_theta_a[predTime_a,:] = rearAxleVel[startSample_a]*(np.sin(theta_global[startSample_a])) * (0.01) + (yVar_calc_theta_a[predTime_a-1])
-
-    # prediction calculation experiment
-    predTime_f = 0
-    startSample_f = 0
-    for predTime_f in range(args.numFrames-startSample_f):
-        predTime_f + 1
-
-        xVar_gps_theta_recursive[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(gpsHeadingAbsolute[predTime_f])) * (0.01) + xVar_gps_theta_recursive[predTime_f-1]) 
-        yVar_gps_theta_recursive[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(gpsHeadingAbsolute[predTime_f])) * (0.01) + yVar_gps_theta_recursive[predTime_f-1]) 
-
-        xVar_calc_theta_static[predTime_f,:] = (rearAxleVel[0]*(np.cos(theta_relative_static_correction[predTime_f-1])) * (0.01)) + (xVar_calc_theta_static[predTime_f-1])
-        yVar_calc_theta_static[predTime_f,:] = (rearAxleVel[0]*(np.sin(theta_relative_static_correction[predTime_f-1])) * (0.01)) + (yVar_calc_theta_static[predTime_f-1])
-
-        xVar_calc_theta_recursive_static[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(theta_relative_static_correction[predTime_f])) * (0.01)) + (xVar_calc_theta_recursive_static[predTime_f-1])
-        yVar_calc_theta_recursive_static[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(theta_relative_static_correction[predTime_f])) * (0.01)) + (yVar_calc_theta_recursive_static[predTime_f-1])
-
-        xVar_calc_theta_recursive_model[predTime_f,:] = (rearAxleVel[predTime_f]*(np.cos(theta_relative_recursive_correction[predTime_f])) * (0.01)) + (xVar_calc_theta_recursive_model[predTime_f-1])
-        yVar_calc_theta_recursive_model[predTime_f,:] = (rearAxleVel[predTime_f]*(np.sin(theta_relative_recursive_correction[predTime_f])) * (0.01)) + (yVar_calc_theta_recursive_model[predTime_f-1])
+        ### theta error ###
+        theta_error_uncorrected[i,:] = _rel_gps_heading - theta[i]
         
-        # print('sample: ', predTime_f, ' x_static: ', xVar_calc_theta_static[predTime_f], ' y_static: ', yVar_calc_theta_static[predTime_f], 'theta_relative_static: ', theta_relative_static[predTime_f])
-        # print('sample: ', predTime_f, ' x_recursive: ', xVar_calc_theta_recursive[predTime_f], ' y_recursive: ', yVar_calc_theta_recursive[predTime_f], 'theta_relative_recursive: ', theta_relative_recursive[predTime_f])
- 
-    # error generation
-    error_gps_x = gpsNorthingRelativeTruth - xVar_gps_theta_recursive
-    error_gps_y =  gpsEastingRelativeTruth - yVar_gps_theta_recursive
-    error_theta_recursive_x = gpsNorthingRelativeTruth - xVar_calc_theta_recursive_model
-    error_theta_recursive_y = gpsEastingRelativeTruth - yVar_calc_theta_recursive_model
-    error_theta_static_x = gpsNorthingRelativeTruth - xVar_calc_theta_static
-    error_theta_static_y = gpsEastingRelativeTruth - yVar_calc_theta_static
+        if theta_error_uncorrected[i] < -5:
+            relative_gps_heading_corrected[i,:] = _rel_gps_heading + 360 * (np.pi/180)
+        elif theta_error_uncorrected[i] > 5:
+            relative_gps_heading_corrected[i,:] = _rel_gps_heading - 360 * (np.pi/180)
+        else:
+            relative_gps_heading_corrected[i,:] = _rel_gps_heading
 
-    # plots
-    plt.style.use('dark_background')
+        theta_error_corrected[i,:] = relative_gps_heading_corrected[i] - theta[i]
 
-    plt.figure(1)
-    plt.subplot(511)
-    plt.title('error plots')
-    plt.plot(gpsTimeTruthFor, error_gps_x, label='gps X error (m)')
-    plt.plot(gpsTimeTruthFor, error_gps_y, label='gps Y error (m)')
-    plt.plot(gpsTimeTruthFor, zero)
-    plt.legend()
+    ### theta global correction ###
+    theta_global = theta + gps_heading[0]
 
-    plt.subplot(512)
-    plt.plot(gpsTimeTruthFor, error_theta_recursive_x, label='error theta recursive X (m)')
-    plt.plot(gpsTimeTruthFor, error_theta_recursive_y, label='error theta recursive Y (m)')
-    plt.plot(gpsTimeTruthFor, zero)
-#    plt.ylim(-15,15)
-    plt.legend()
+    ### 2D pose prediction ###
+    x_prediction = np.zeros((len(novatel_state[0]),1))
+    y_prediction = np.zeros((len(novatel_state[0]),1))
 
-    plt.subplot(513)
-    plt.plot(gpsTimeTruthFor, interpSteeredWheelAngle, label='steering wheel angle (rad)')
-    plt.legend()
+    prediction_time = 0
+    start_sample = 0
+    for prediction_time in range(len(novatel_state[0])):
+        prediction_time + 1
+        x_prediction[prediction_time,:] = interp_avg_rear_axle_speed[prediction_time] * np.cos(theta_global[prediction_time]) * 0.01 + x_prediction[prediction_time - 1]
+        y_prediction[prediction_time,:] = interp_avg_rear_axle_speed[prediction_time] * np.sin(theta_global[prediction_time]) * 0.01 + y_prediction[prediction_time - 1]
 
-    plt.subplot(514)
-    plt.plot(gpsTimeTruthFor, interpSteerWheelAngleRate, label='steering wheel angle rate (rad/sec)')
-    plt.legend()
+    ### distance traveled ###
+    distance_traveled_novatel = np.cumsum(novatel_state[5]) * 0.01 # scalar for sample rate
+    distance_traveled_can = np.cumsum(interp_avg_rear_axle_speed) * 0.01 # scalar for sample rate
+    distance_traveled_error = ((distance_traveled_novatel - distance_traveled_can) / distance_traveled_novatel) * 100.0
 
-    plt.subplot(515)
-    plt.plot(gpsTimeTruthFor, interpAvgRearAxleSpeed, label='rear axle velocity (m/s)')
-    plt.legend()
+    ### plots ### 
+    fig1, (vel, accel, ws, steer, error, theta, dist_trav, dist_trav_error) = plt.subplots(8,1, sharex=True)
+    fig1.suptitle('entire dataset')
+    vel.plot(novatel_state[0], interp_avg_rear_axle_speed, label='rear axle speed CAN (m/s)')
+    vel.plot(novatel_state[0], novatel_state[5], label='forward velocity novatel (m/s)')
+    vel.legend()
+    
+    accel.plot(novatel_state[0], interp_forward_accel, label='vn accel forward (m/s/s)')
+    accel.plot(novatel_state[0], interp_calc_forward_accel, label='calc accel forward (m/s/s)')
+    accel.plot(novatel_state[0], interp_filter_calc_forward_accel, label='filtered calc accel forward (m/s/s)')
+    accel.legend()
+
+    ws.plot(novatel_state[0], interp_wheel_speed_fl, label='fl wheel speed (m/s)')
+    ws.plot(novatel_state[0], interp_wheel_speed_fr, label='fr wheel speed (m/s)')
+    ws.plot(novatel_state[0], interp_wheel_speed_rl, label='rl wheel speed (m/s)')
+    ws.plot(novatel_state[0], interp_wheel_speed_rr, label='rr wheel speed (m/s)')
+    ws.legend()
+
+    steer.plot(novatel_state[0], interp_steering_wheel_angle, label='steering wheel angle (deg)')
+    steer.plot(novatel_state[0], interp_steering_rack_angle, label='steering rack angle (deg)')
+    steer.legend()
+
+    error.plot(novatel_state[0], theta_error_corrected * 180/np.pi, label='corrected theta error (deg)')
+    error.plot(novatel_state[0], zero)
+    error.legend()
+
+    theta.plot(novatel_state[0], theta_global, label='theta global (rad)')
+    theta.plot(novatel_state[0], gps_heading, label='global heading (rad)')
+    theta.legend()
+
+    dist_trav.plot(novatel_state[0], distance_traveled_novatel, label='novatel distance travled (m)')
+    dist_trav.plot(novatel_state[0], distance_traveled_can, label='can distance traveled (m)')
+    dist_trav.legend()
+
+    dist_trav_error.plot(novatel_state[0], distance_traveled_error, label='percent error (%)')
+    dist_trav_error.plot(novatel_state[0], zero)
+    dist_trav_error.set_ylim(-0.75,0.75)
+    dist_trav_error.legend()
 
     plt.figure(2)
     plt.grid(b=True)
-    plt.title('global x/y predictions')
-    plt.scatter(gpsNorthingRelativeTruth, gpsEastingRelativeTruth, color='green', label='novatel position (m)')
-    plt.scatter(xVar_gps_theta_recursive, yVar_gps_theta_recursive, color='red', label='recrusive gps theta (m / x,y)')
-    plt.scatter(xVar_calc_theta_recursive_model, yVar_calc_theta_recursive_model, color='purple', label='recursive calc theta (m / x,y)')
-    plt.scatter(xVar_calc_theta_recursive_static, yVar_calc_theta_recursive_static, color='orange', label='static calc theta (m / x,y)')                  
-    plt.scatter(xVar_calc_theta_static, yVar_calc_theta_static, color='blue', label='propagation from 0 (m / x,y)')  
-    # plt.xlim(-225,225)
-    # plt.ylim(-225,225)
+    plt.title('vehicle motion')
+    plt.scatter(relative_gps_easting, relative_gps_northing, label='relative motion (utm)')
+    plt.scatter(y_prediction, x_prediction, label='predicted path (m)')
     plt.legend()
 
-    # plt.figure(3)
-    # plt.subplot(311)
-    # plt.plot(gpsTimeVehicleFor, pathRadius, label='path radius (inches)')
-    # plt.plot(gpsTimeVehicleFor, steerWheelAngleFor, label='steer angle (deg)')
-    # plt.legend()
-
-    # plt.subplot(312)
-    # plt.plot(gpsTimeVehicleFor, calcSteerWheelRate, label='steering rack angle rate (rad/sec)')
-    # plt.legend()
-
-    # plt.subplot(313)
-    # plt.plot(gpsTimeVehicleFor, wheelSpeedFLFor, label='wheel speed FL')
-    # plt.plot(gpsTimeVehicleFor, wheelSpeedFRFor, label='wheel speed FR')
-    # plt.plot(gpsTimeVehicleFor, wheelSpeedRLFor, label='wheel speed RL')
-    # plt.plot(gpsTimeVehicleFor, wheelSpeedRRFor, label='wheel speed RR')    
-    # plt.legend()
-
-    # plt.figure(3)
-    # plt.subplot(111)
-    # plt.plot(gpsTimeVehicleFor, vnAccelXFor, label='accel x m/s/s')
-    # plt.plot(gpsTimeVehicleFor, vnAccelYFor, label='accel y m/s/s')
-    # plt.legend()
-
     plt.show()
+
 
 if __name__=='__main__':
     main()

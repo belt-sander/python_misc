@@ -41,6 +41,11 @@ def main():
     vehicleStateVelocityError = np.zeros((len(ubxInput),1))
     rawSteeringWheelAngle = np.zeros((len(ubxInput),1))
 
+    angularLeftFrontWheelSpeed = np.zeros((len(ubxInput),1))
+    angularRightFrontWheelSpeed = np.zeros((len(ubxInput),1))
+    angularLeftRearWheelSpeed = np.zeros((len(ubxInput),1))
+    angularRightRearWheelSpeed = np.zeros((len(ubxInput),1))
+
     # data to be used in num_frames
     thetaRecursiveCalc = np.zeros(((args.num_frames),1))
     thetaRecursiveCalcGlobal = np.zeros(((args.num_frames),1))
@@ -78,6 +83,14 @@ def main():
     abbreviatedUbxVelocity = np.zeros(((args.num_frames),1))
     abbreviatedRawSteeringWheelAngle = np.zeros(((args.num_frames),1))
     abbreviatedVnRoll = np.zeros(((args.num_frames),1))
+    abbreviatedCalcVnYawRate = np.zeros(((args.num_frames),1))
+    abbreviatedCalcUbxYawRate = np.zeros(((args.num_frames),1))
+    abbreviatedVnHeading = np.zeros(((args.num_frames),1))
+    abbreviatedUbxHeading = np.zeros(((args.num_frames),1))
+    yawRateEstRear = np.zeros(((args.num_frames),1))
+    yawRateEstFront = np.zeros(((args.num_frames),1))
+    abbreviatedAvgWheelAngVel = np.zeros(((args.num_frames),1))
+
 
     modelSteeringWheelOffset = np.zeros(((args.num_frames),1))
 
@@ -94,6 +107,9 @@ def main():
     steeringWheelAngle = motecInput[:,243]
     wheelSpeedLeftRear = motecInput[:,185]
     wheelSpeedRightRear = motecInput[:,186]
+    wheelSpeedLeftFront = motecInput[:,251]
+    wheelSpeedRightFront = motecInput[:,252]
+
     vnYaw = motecInput[:,3]
     vnPitch = motecInput[:,4]
     vnRoll = motecInput[:,5]
@@ -103,14 +119,17 @@ def main():
 
 
     # visual time syncronization laying velocity from vehicle controller on top of SoG output from ublox
-    userTimeOffset = 5.575 # file 2 
-    # userTimeOffset = 12.1 # file 1 
+    # userTimeOffset = 5.575 # file 2 
+    userTimeOffset = 12.1 # file 1 
 
     # tuning parameters 
     speedCorrection = 1.115 # (1.1 is pretty solid)
-    steeringRackRatioGuess = 13.88 # guess at steering rack ratio (13.88 is pretty solid)
-    steeringWheelAngleOffset = 1.07 # degrees added to reported CAN steering angle (1.07 is pretty solid)
+    steeringRackRatioGuess = 13.68 # guess at steering rack ratio (13.88 is pretty solid)
+    steeringWheelAngleOffset = 1.05 # degrees added to reported CAN steering angle (1.07 is pretty solid)
     wheelBase = 2.95 # meters       
+    frontTrackWidth = 1.6616 # meters
+    rearTrackWidth = 1.69926 # meters
+    tireCircumfrence = 2.207 # meters
 
     for i, row in enumerate(motecInput):
         system_time_for = row[0]
@@ -119,8 +138,10 @@ def main():
     InterpMotecTow = np.resize(motecTow, np.size(motecTow)) # seconds
     InterpVelocity = np.interp(ubxTow, InterpMotecTow, forwardVelocity) # m/s
     InterpSteeringWheelAngle = np.interp(ubxTow, InterpMotecTow, (steeringWheelAngle + steeringWheelAngleOffset)) # degree
-    InterpWheelSpeedLeftRear = np.interp(ubxTow, InterpMotecTow, wheelSpeedLeftRear) # m/s
-    InterpWheelSpeedRightRear = np.interp(ubxTow, InterpMotecTow, wheelSpeedRightRear) # m/s
+    InterpWheelSpeedLeftRear = np.interp(ubxTow, InterpMotecTow, (wheelSpeedLeftRear * speedCorrection)) # m/s
+    InterpWheelSpeedRightRear = np.interp(ubxTow, InterpMotecTow, (wheelSpeedRightRear * speedCorrection)) # m/s
+    InterpWheelSpeedLeftFront = np.interp(ubxTow, InterpMotecTow, ((wheelSpeedLeftFront / 2.237) * speedCorrection)) # m/s (UGHHHH)
+    InterpWheelSpeedRightFront = np.interp(ubxTow, InterpMotecTow, ((wheelSpeedRightFront / 2.237) * speedCorrection)) # m/s (UGHHHH)
     InterpMotecVnYaw = np.interp(ubxTow, InterpMotecTow, vnYaw) # degree
     InterpMotecVnRoll = np.interp(ubxTow, InterpMotecTow, vnRoll) # degree
     InterpMotecVnAccelX = np.interp(ubxTow, InterpMotecTow, vnAccelX) # m/s/s
@@ -142,7 +163,10 @@ def main():
         ubxEasting[i,: ] = utmETruth 
  
     # combine relevant data in to new column stack
-    syncData = np.column_stack((ubxTow, ubxNorthing, ubxEasting, ubxHeading, InterpWheelSpeedLeftRear, InterpWheelSpeedRightRear, InterpSteeringWheelAngle, InterpMotecVnYaw, InterpMotecVnAccelX, InterpMotecVnAccelY, InterpMotecVnAccelZ, ubxVelocity, InterpRawSteeringWheelAngle))
+    syncData = np.column_stack((ubxTow, ubxNorthing, ubxEasting, ubxHeading, InterpWheelSpeedLeftRear, 
+                                InterpWheelSpeedRightRear, InterpSteeringWheelAngle, InterpMotecVnYaw, 
+                                InterpMotecVnAccelX, InterpMotecVnAccelY, InterpMotecVnAccelZ, ubxVelocity, 
+                                InterpRawSteeringWheelAngle, InterpWheelSpeedLeftFront, InterpWheelSpeedRightFront))
     for i, row in enumerate(syncData):
         ubx_northing = row[1]
         ubx_easting = row[2]
@@ -156,6 +180,8 @@ def main():
         vn_accel_z = row[10]
         ubx_velocity = row[11]
         steering_wheel_angle = row[12]
+        lf_speed = row[13] 
+        rf_speed = row[14]
         
         if (vn_yaw < 0):
             motecVnYaw[i,:] = vn_yaw + 360
@@ -163,7 +189,7 @@ def main():
             motecVnYaw[i,:] = vn_yaw
 
         gpsHeadingRad[i,:] = ubx_heading * np.pi/180
-        avgRearAxleSpeed[i,:] = ((lr_speed + rr_speed) / 2) * speedCorrection
+        avgRearAxleSpeed[i,:] = ((lr_speed + rr_speed) / 2)
         steeredWheelAngle[i,:] = ((steer_wheel_angle / steeringRackRatioGuess) * -1)  * np.pi/180 # sign flip for right hand rule vehicle frame
         steeredWheelAngleModel[i,:] = (steer_wheel_angle / ((steeringRackRatioGuess * ((-avgRearAxleSpeed[i]/6)+1)) * -1))  * np.pi/180 # sign flip for right hand rule vehicle frame
         gpsRelativeMotionNorthing[i,:] = ubx_northing - ubxNorthing[0]
@@ -171,10 +197,16 @@ def main():
         rawSteeringWheelAngle[i,:] = steering_wheel_angle
         vehicleStateVelocityError[i,:] = ubx_velocity - avgRearAxleSpeed[i]
 
+
+
         # print('frame: ', i, ' avg rear speed: ', avgRearAxleSpeed[i], ' steered wheel angle: ', steeredWheelAngle[i], ' steer wheel angle direct: ', steer_wheel_angle)
 
     # combine data for vehicle model processing
-    modelData = np.column_stack((ubxTow, gpsRelativeMotionNorthing, gpsRelativeMotionEasting, gpsHeadingRad, avgRearAxleSpeed, steeredWheelAngle, steeredWheelAngleModel, gpsHeadingRad, InterpMotecVnAccelX, InterpMotecVnAccelY, InterpMotecVnAccelZ, vehicleStateVelocityError, ubxVelocity, rawSteeringWheelAngle, InterpMotecVnRoll))
+    modelData = np.column_stack((ubxTow, gpsRelativeMotionNorthing, gpsRelativeMotionEasting, gpsHeadingRad, 
+                                avgRearAxleSpeed, steeredWheelAngle, steeredWheelAngleModel, gpsHeadingRad, 
+                                InterpMotecVnAccelX, InterpMotecVnAccelY, InterpMotecVnAccelZ, vehicleStateVelocityError, 
+                                ubxVelocity, rawSteeringWheelAngle, InterpMotecVnRoll, motecVnYaw,
+                                InterpWheelSpeedLeftRear, InterpWheelSpeedRightRear, InterpWheelSpeedLeftFront, InterpWheelSpeedRightFront))
 
     # theta calculation
     for i, row in enumerate(modelData):
@@ -195,7 +227,12 @@ def main():
                 veh_state_velocity_error = row[11]
                 ubx_velocity = row[12]    
                 steering_wheel = row[13]   
-                vn_roll = row[14]         
+                vn_roll = row[14]   
+                vn_yaw = row[15]      
+                lr_speed = row[16]
+                rr_speed = row[17]
+                lf_speed = row[18]
+                rf_speed = row[16]
 
                 abbreviatedAvgAxleSpeed[t,:] = avg_axle_spd
                 abbreviatedSteerWheelAngle[t,:] = rad_wheel_angle
@@ -210,6 +247,8 @@ def main():
                 abbreviatedUbxVelocity[t,:] = ubx_velocity
                 abbreviatedRawSteeringWheelAngle[t,:] = steering_wheel
                 abbreviatedVnRoll[t,:] = vn_roll
+                abbreviatedVnHeading[t,:] = vn_yaw
+                abbreviatedUbxHeading[t,:] = ubx_heading_rad * 180/np.pi
 
                 if (ubx_heading_rad > (270 * np.pi/180)):
                     abbreviatedUbxHeading[t,:] = (((ubx_heading_rad) - (360 * np.pi/180)) * -1) - (270*np.pi/180)
@@ -220,6 +259,11 @@ def main():
                 thetaRecursiveCalcModel[t,:] = ((avg_axle_spd/wheelBase) * (np.tan(rad_wheel_angle_model)) * (0.1)) + thetaRecursiveCalc[t-1]
                 thetaStaticModel[t,:] = ((avgRearAxleSpeed[args.start_frame]/wheelBase) * (np.tan(steeredWheelAngle[args.start_frame]) * (0.1)) + thetaStaticModel[t-1])
                 
+                yawRateEstRear[t,:] = ((rr_speed*(2*np.pi)/tireCircumfrence) - (lr_speed*(2*np.pi)/tireCircumfrence)) / rearTrackWidth 
+                yawRateEstFront[t,:] = ((rf_speed*(2*np.pi)/tireCircumfrence) - (lf_speed*(2*np.pi)/tireCircumfrence)) / (frontTrackWidth)
+
+                abbreviatedAvgWheelAngVel[t,:] = (((rr_speed*(2*np.pi)/tireCircumfrence)+(lr_speed*(2*np.pi)/tireCircumfrence)+(rf_speed*(2*np.pi)/tireCircumfrence)+(lf_speed*(2*np.pi)/tireCircumfrence))/4) # rad/sec
+
                 # print(' rear axle speed: ', abbreviatedAvgAxleSpeed[t], ' wheel angle: ', abbreviatedSteerWheelAngle[t]*180/np.pi, ' wheel angle model: ', abbreviatedSteerWheelAngleModel[t]*180/np.pi, ' theta static model: ', thetaStaticModel[t]*180/np.pi, ' theta recur model: ', thetaRecursiveCalcModel[t]*180/np.pi, ' speed at args start: ', avgRearAxleSpeed[args.start_frame], ' sa at args start (rad): ', steeredWheelAngle[args.start_frame]*10)    
 
     # global correction
@@ -241,7 +285,9 @@ def main():
         xVariableStaticCalc[t,:] = (abbreviatedAvgAxleSpeed[0] * (np.cos(thetaStaticModelGlobal[t])) * (0.1)) + (xVariableStaticCalc[t-1])
         yVariableStaticCalc[t,:] = (abbreviatedAvgAxleSpeed[0] * (np.sin(thetaStaticModelGlobal[t])) * (0.1)) + (yVariableStaticCalc[t-1])        
 
-        # print('frame: ', t, ' x: ', xVariableRecursiveCalc[t], ' y: ', yVariableRecursiveCalc[t], ' x model: ', xVariableRecursiveCalcModel[t], ' y model: ', yVariableRecursiveCalcModel[t], ' x static: ', xVariableStaticCalc[t], ' y static: ', yVariableStaticCalc[t])   
+        # print('frame: ', t, ' x: ', xVariableRecursiveCalc[t], ' y: ', yVariableRecursiveCalc[t], 
+                        # ' x model: ', xVariableRecursiveCalcModel[t], ' y model: ', yVariableRecursiveCalcModel[t], 
+                        # ' x static: ', xVariableStaticCalc[t], ' y static: ', yVariableStaticCalc[t])   
 
     xVariableRecursiveCalcOffset = xVariableRecursiveCalc - xVariableRecursiveCalc[0]
     yVariableRecursiveCalcOffset = yVariableRecursiveCalc - yVariableRecursiveCalc[0]
@@ -261,9 +307,6 @@ def main():
     yVariableRecursiveCalcError = (yVariableRecursiveCalcOffset - localMotionEasting) 
     # dynamic wheel offset correction guesses
     modelSteeringWheelOffset = (steeringWheelAngleOffset * (yVariableRecursiveCalcError * (0.1))) + steeringWheelAngleOffset
-
-
-
 
 
     # closed loop x,y,theta calculation
@@ -303,7 +346,18 @@ def main():
     clModelSteeringRatio = (steeringRackRatioGuess * (clyVariableRecursiveCalcError * -0.01))
     clModelSteeringRatioResult = steeringRackRatioGuess+clModelSteeringRatio
 
+   # calculated yaw rate by taking derivative of heading
+    abbreviatedVnHeading = np.array(abbreviatedVnHeading)
+    abbreviatedUbxHeading = np.array(abbreviatedUbxHeading)
+    thetaRecursiveCalcGlobal = np.array(thetaRecursiveCalcGlobal)
 
+    abbreviatedVnHeading = abbreviatedVnHeading.reshape(np.size(abbreviatedVnHeading))
+    abbreviatedUbxHeading = abbreviatedUbxHeading.reshape(np.size(abbreviatedUbxHeading))
+    thetaRecursiveCalcGlobal = thetaRecursiveCalcGlobal.reshape(np.size(thetaRecursiveCalcGlobal))
+
+    abbreviatedCalcVnYawRate = np.gradient(abbreviatedVnHeading)
+    abbreviatedCalcUbxYawRate = np.gradient(abbreviatedUbxHeading)
+    abbreviatedCalcThetaRate = np.gradient(thetaRecursiveCalcGlobal)
 
     # kf experiment
     kf = KalmanFilter(transition_matrices=np.array([[1,1],[0,1]]),transition_covariance=0.01 * np.eye(2))
@@ -315,137 +369,121 @@ def main():
     # print('veh error: ', abbreviatedVehStateVelError)
     # print('array kf prediction: ', kf_prediction_array)
     # print('resized kf prediction: ', kf_prediction_resize)
-    print()
-    print('cl ratio model: ', clModelSteeringRatioResult)
 
 
     # plot
-    plt.style.use('dark_background')
+    # plt.style.use('dark_background')
 
-    # plt.figure(1)
-    # plt.subplot(411)
-    # plt.title('entire dataset')    
-    # plt.plot(ubxTow, InterpVelocity, color='red', label='forward vel vectornav (m/s)')
-    # plt.plot(ubxTow, ubxVelocity, color='blue', label='forward vel ubx (m/s)')
-    # plt.plot(ubxTow, avgRearAxleSpeed, label='average rear axle speed (m/s)')
-    # plt.legend()
+    '''
+    entire dataset samples
+    '''
+    plt.figure(1)
+    plt.subplot(411)
+    plt.title('entire dataset')    
+    plt.plot(ubxTow, InterpVelocity, color='red', label='forward vel vectornav (m/s)')
+    plt.plot(ubxTow, ubxVelocity, color='blue', label='forward vel ubx (m/s)')
+    plt.plot(ubxTow, avgRearAxleSpeed, label='average rear axle speed (m/s)')
+    plt.plot(ubxTow, InterpWheelSpeedLeftRear, label='left rear (m/s)')
+    plt.plot(ubxTow, InterpWheelSpeedRightRear, label='right rear (m/s)')
+    plt.plot(ubxTow, InterpWheelSpeedLeftFront, label='left front (m/s)')
+    plt.plot(ubxTow, InterpWheelSpeedRightFront, label='right front (m/s)')            
+    plt.legend()
 
-    # plt.subplot(412)
-    # plt.plot(ubxTow, steeredWheelAngle, label='front wheel angle (rad)')
-    # plt.legend()
+    plt.subplot(412)
+    plt.plot(ubxTow, steeredWheelAngle, label='front wheel angle (rad)')
+    plt.legend()
 
-    # plt.subplot(413)
-    # # plt.plot(ubxTow, InterpWheelSpeedLeftRear, label='left rear wheel speed (m/s)')
-    # # plt.plot(ubxTow, InterpWheelSpeedRightRear, label='right rear wheel speed (m/s)')
-    # plt.plot(ubxTow, InterpSteeringWheelAngle, label='InterpSteeringWheelAngle (deg)')
-    # plt.legend()
+    plt.subplot(413)
+    plt.plot(ubxTow, InterpSteeringWheelAngle, label='InterpSteeringWheelAngle (deg)')
+    plt.legend()
 
-    # plt.subplot(414)
-    # plt.plot(ubxTow, motecVnYaw, label='vn heading')
-    # plt.plot(ubxTow, gpsHeadingRad*180/np.pi, label='ubx heading')
-    # plt.legend()
+    plt.subplot(414)
+    plt.plot(ubxTow, motecVnYaw, label='vn heading')
+    plt.plot(ubxTow, gpsHeadingRad*180/np.pi, label='ubx heading')
+    plt.legend()
 
+    '''
+    selected data
+    '''
     plt.figure(2)
-    plt.subplot(811)
+    plt.subplot(611)
     plt.title('data from sample window')    
-    # plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobalModel * 180/np.pi, label='theta global model (deg)')
-    plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobal * 180/np.pi, label='theta global (deg)')
-    plt.plot(abbrievatedUbxTime, abbreviatedUbxHeading * 180/np.pi, label='ubx heading (deg)')
+    plt.plot(abbrievatedUbxTime, thetaRecursiveCalcGlobal * 180/np.pi, label='estimated global heading (deg)')
+    plt.plot(abbrievatedUbxTime, abbreviatedUbxHeading * 180/np.pi, label='measured global heading (deg)')
     plt.legend()
 
-    plt.subplot(812)
-    # plt.plot(abbrievatedUbxTime, abbreviatedSteerWheelAngleModel, label='steer wheel angle model (rad)')
-    plt.plot(abbrievatedUbxTime, abbreviatedSteerWheelAngle * 180/np.pi, label='steer wheel angle (deg)')
+    plt.subplot(612)
+    plt.plot(abbrievatedUbxTime, abbreviatedSteerWheelAngle * 180/np.pi, label='front wheel angle (deg)')
     plt.legend()
 
-    plt.subplot(813)
+    plt.subplot(613)
     plt.plot(abbrievatedUbxTime, abbreviatedAvgAxleSpeed, label='rear axle speed (m/s)')
     plt.legend()
 
-    plt.subplot(814)
-    plt.plot(abbrievatedUbxTime, abbreviatedVnAccelX, label='forward accel (m/s/s)')
-    plt.plot(abbrievatedUbxTime, abbreviatedVnAccelY, label='lateral accel (m/s/s)')
+    plt.subplot(614)
+    # plt.plot(abbrievatedUbxTime, abbreviatedCalcVnYawRate, label='vn yaw rate gradient (deg/sec)')
+    plt.plot(abbrievatedUbxTime, abbreviatedCalcUbxYawRate * 180/np.pi, label='ubx yaw rate gradient (deg/sec)')
+    plt.plot(abbrievatedUbxTime, abbreviatedCalcThetaRate * 180/np.pi, label='estimated yaw rate (deg/sec)')
+    plt.ylim(-10,10)
     plt.legend()
 
-    plt.subplot(815)
-    plt.plot(abbrievatedUbxTime, abbreviatedVehStateVelError, label='vehicle state velocity error (m/s)')
-    plt.plot(abbrievatedUbxTime, zero)
-    plt.legend()
-
-    plt.subplot(816)
-    # plt.plot(abbrievatedUbxTime, abbreviatedUbxDistanceTraveled, label='ubx distance traveled (m)')
-    # plt.plot(abbrievatedUbxTime, abbreviatedVehDistanceTraveled, label='vehicle distance traveled (m)')
-    plt.plot(abbrievatedUbxTime, abbreviatedLongitudinalError, label='abbreviated long error (%)')
+    plt.subplot(615)
+    plt.plot(abbrievatedUbxTime, abbreviatedLongitudinalError, label='longitudinal error (% traveled)')
     plt.plot(abbrievatedUbxTime, zero, color='green')
     plt.legend()
 
-    plt.subplot(817)
-    plt.plot(abbrievatedUbxTime, modelSteeringWheelOffset, label='dynamic steering wheel angle offset value (deg)')
-    plt.legend()
-
-    plt.subplot(818)
-    plt.plot(abbrievatedUbxTime, xVariableRecursiveCalcError, label='X error (m)')
-    plt.plot(abbrievatedUbxTime, yVariableRecursiveCalcError, label='Y error (m)')
+    plt.subplot(616)
+    plt.plot(abbrievatedUbxTime, xVariableRecursiveCalcError, label='2D X error (m)')
+    plt.plot(abbrievatedUbxTime, yVariableRecursiveCalcError, label='2D Y error (m)')
     plt.plot(abbrievatedUbxTime, zero)
     plt.legend()
 
-    # plt.figure(3)
-    # plt.grid(b=True)
-    # plt.title('entire dataset trajectory')
-    # plt.scatter(gpsRelativeMotionNorthing, gpsRelativeMotionEasting, label='relative motion (m)')
-    # plt.scatter(abbreviatedMotionNorthing, abbreviatedMotionEasting, s=25, c=abbrievatedUbxTime, label='relative local motion (m)')
-    # plt.legend()
+
+    '''
+    position scatters
+    '''
+    plt.figure(3)
+    plt.grid(b=True)
+    plt.title('entire dataset trajectory')
+    plt.scatter(gpsRelativeMotionNorthing, gpsRelativeMotionEasting, label='relative motion (m)')
+    plt.scatter(abbreviatedMotionNorthing, abbreviatedMotionEasting, s=25, c=abbrievatedUbxTime, label='relative local motion (m)')
+    plt.legend()
 
     plt.figure(4)
     plt.grid(b=True)
     plt.title(steeringRackRatioGuess)
-    plt.scatter(localMotionNorthing, localMotionEasting, color='red', label='local motion (m)')
-    plt.scatter(xVariableRecursiveCalcOffset, yVariableRecursiveCalcOffset, c=abbreviatedVnRoll, label='dead reckoning vehicle data (m)')
-    # plt.scatter(clxVariableRecursiveCalc, clyVariableRecursiveCalc, color='green', label='cl dead reckoning vehicle data (m)')
-    # plt.scatter(xVariableRecursiveCalcModelOffset, yVariableRecursiveCalcModelOffset, color='blue', label='prediction recursive vel model(m)')
-    # plt.scatter(xVariableStaticCalcOffset, yVariableStaticCalcOffset, color='green', label='static t0 model (m)')    
+    plt.scatter(localMotionNorthing, localMotionEasting, color='red', label='ground truth (m)')
+    plt.scatter(xVariableRecursiveCalcOffset, yVariableRecursiveCalcOffset, c=abbreviatedVnRoll, label='calculated dead reckoning (m)')
     plt.legend()
 
-    plt.figure(6)
-    plt.title('cl model')
-    plt.subplot(711)
-    plt.plot(abbrievatedUbxTime, clSteeredWheelAngle, label='clSteeredWheelAngle')
-    plt.plot(abbrievatedUbxTime, abbreviatedSteerWheelAngle, label='abbreviatedSteerWheelAngle')
+    '''
+    yaw rate tests
+    '''
+    plt.figure(5)
+    plt.subplot(411)
+    plt.title('yaw rate tests')    
+    plt.plot(abbrievatedUbxTime, abbreviatedVnHeading, label='vn heading (deg)')
+    plt.plot(abbrievatedUbxTime, abbreviatedUbxHeading * 180/np.pi, label='ubx heading (deg)')
     plt.legend()
 
-    plt.subplot(712)
-    plt.plot(abbrievatedUbxTime, clThetaRecursiveCalc, label='clThetaRecursiveCalc')
-    plt.plot(abbrievatedUbxTime, clThetaRecursiveCalcGlobal, label='clThetaRecursiveCalcGlobal')
+    plt.subplot(412)
+    plt.plot(abbrievatedUbxTime, abbreviatedCalcVnYawRate * -1, label='vn yaw rate gradient(deg/sec)')
+    plt.plot(abbrievatedUbxTime, abbreviatedCalcUbxYawRate * 180/np.pi, label='ubx yaw rate gradient(deg/sec)')
+    plt.plot(abbrievatedUbxTime, abbreviatedCalcThetaRate * 180/np.pi, label='calc theta yaw rate gradient(deg/sec)')
+    plt.plot(abbrievatedUbxTime, (yawRateEstRear * 180/np.pi) / 10, label='rear yr estimate (deg/sec)')   
+    plt.ylim(-10,10)
+    plt.legend() 
+
+    plt.subplot(413)
+    plt.plot(abbrievatedUbxTime, yawRateEstFront, label='front yr estimate (rad/sec)')
+    plt.plot(abbrievatedUbxTime, yawRateEstRear, label='rear yr estimate (rad/sec)')   
     plt.legend()
 
-    plt.subplot(713)
-    plt.plot(abbrievatedUbxTime, clModelSteeringWheelOffset, label='cl dynamic steering wheel angle offset value (deg)')
-    # plt.plot(abbrievatedUbxTime, modelSteeringWheelOffset, label='dynamic steering wheel angle offset value (deg)')
+    plt.subplot(414)
+    plt.plot(abbrievatedUbxTime, abbreviatedAvgWheelAngVel, label='avg angular wheel velocity (rad/sec)')
     plt.legend()
 
-    plt.subplot(714)
-    plt.plot(abbrievatedUbxTime, clModelSteeringRatio, label='cl dynamic steering ratio adder (ratio)')
-    plt.legend()
 
-    plt.subplot(715)
-    plt.plot(abbrievatedUbxTime, clModelSteeringRatioResult, label='cl dynamic steering ratio result (ratio)')
-
-    plt.subplot(716)
-    plt.plot(abbrievatedUbxTime, clxVariableRecursiveCalcError, label='cl X error (m)')
-    plt.plot(abbrievatedUbxTime, clyVariableRecursiveCalcError, label='cl Y error (m)')
-    plt.plot(abbrievatedUbxTime, xVariableRecursiveCalcError, label='X error (m)')
-    plt.plot(abbrievatedUbxTime, yVariableRecursiveCalcError, label='Y error (m)')    
-    plt.legend()
-
-    plt.subplot(717)
-    plt.plot(abbrievatedUbxTime, abbreviatedVnRoll, label='roll (deg)')
-    plt.legend()
-
-    # plt.figure(5)
-    # plt.title('kf states')
-    # plt.plot(abbrievatedUbxTime, kf_prediction_resize, color='orange', label='kf prediction')
-    # plt.scatter(abbrievatedUbxTime, abbreviatedVehStateVelError, label='velocity error')
-    # plt.legend()
 
     plt.show()
 
