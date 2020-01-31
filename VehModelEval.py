@@ -20,7 +20,7 @@ def tuning():
     # tuning parameters for 2017 Honda Civic
     steering_ratio = 10.98
     steering_offset = 0.0
-    steering_ratio_speed_scalar = 0.4625
+    steering_ratio_speed_scalar = 0.45 # 0.4625 is a good value for out and back dataset
     wheel_base = 2.7 # meters 106.3 inches
     track_width = 1.5621 # meters 61.5 inches rear  
     rack_scalar = -1.0 # ratio
@@ -97,6 +97,9 @@ def vehicle_data():
     vn_pitch = np.zeros((len(vehicle),1))
     vn_roll = np.zeros((len(vehicle),1))
 
+    ### time correction value for dealing with bad time reference ###
+    gps_time_vehicle_correction = -0.0
+
     for i, row in enumerate(vehicle):
         _gps_time_vehicle = row[0]
         _steer_wheel_angle = row[5]
@@ -118,7 +121,7 @@ def vehicle_data():
         vn_pitch[i,:] = _vn_pitch
         vn_roll[i,:] = _vn_roll
         avg_rear_axle_speed[i,:] = (_wheel_speed_rl+_wheel_speed_rr)/2 # speed at center of rear axle
-        gps_time_vehicle[i,:] = _gps_time_vehicle
+        gps_time_vehicle[i,:] = _gps_time_vehicle + gps_time_vehicle_correction
         steering_wheel_angle[i,:] = _steer_wheel_angle
         wheel_speed_fl[i,:] = _wheel_speed_fl
         wheel_speed_fr[i,:] = _wheel_speed_fr
@@ -275,6 +278,7 @@ def main():
     ws.plot(novatel_state[0], interp_wheel_speed_fr, label='fr wheel speed (m/s)')
     ws.plot(novatel_state[0], interp_wheel_speed_rl, label='rl wheel speed (m/s)')
     ws.plot(novatel_state[0], interp_wheel_speed_rr, label='rr wheel speed (m/s)')
+    ws.plot(novatel_state[0], novatel_state[5], label='forward vel novatel (m/s)')
     ws.legend()
 
     steer.plot(novatel_state[0], interp_steering_wheel_angle, label='steering wheel angle (deg)')
@@ -319,19 +323,19 @@ def main():
     plt.scatter(y_prediction, x_prediction, label='predicted path (m)')
     plt.legend()
 
-    # fig2, (vel, accel, gyro) = plt.subplots(3,1, sharex=True)
-    # fig2.suptitle('latency evaluation')
-    # vel.plot(novatel_state[0], interp_avg_rear_axle_speed, label='rear axle speed CAN (m/s)')
-    # vel.plot(novatel_state[0], novatel_state[5], label='forward velocity novatel (m/s)')
-    # vel.legend()
+    fig2, (vel, accel, gyro) = plt.subplots(3,1, sharex=True)
+    fig2.suptitle('latency evaluation')
+    vel.plot(novatel_state[0], interp_avg_rear_axle_speed, label='rear axle speed CAN (m/s)')
+    vel.plot(novatel_state[0], novatel_state[5], label='forward velocity novatel (m/s)')
+    vel.legend()
     
-    # accel.plot(novatel_state[0], interp_forward_accel, label='vn accel forward (m/s/s)')
-    # accel.plot(novatel_state[0], interp_calc_forward_accel, label='calc accel forward (m/s/s)')
-    # accel.plot(novatel_state[0], interp_filter_calc_forward_accel, label='filtered calc accel forward (m/s/s)')
-    # accel.legend()    
+    accel.plot(novatel_state[0], interp_forward_accel, label='vn accel forward (m/s/s)')
+    accel.plot(novatel_state[0], interp_calc_forward_accel, label='calc accel forward (m/s/s)')
+    accel.plot(novatel_state[0], interp_filter_calc_forward_accel, label='filtered calc accel forward (m/s/s)')
+    accel.legend()    
 
-    # gyro.plot(novatel_state[0], accel_error, label='calculated acceleration error (m/s/s)')
-    # gyro.legend()
+    gyro.plot(novatel_state[0], accel_error, label='calculated acceleration error (m/s/s)')
+    gyro.legend()
 
     plt.show()
 

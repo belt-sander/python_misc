@@ -46,14 +46,15 @@ def main():
     print("data has been imported")
     print("")
 
+    # novatel UTC time == inputData[:,40]
     gpsGenPosix = np.zeros((len(inputData),1))
     sysTime = inputData[:,0]
     gpsTimeTest = inputData[:,87] 
     avgSpd = inputData[:,1] # km/h
     wheelSpeedFL = inputData[:,90] # m/s
-    wheelSpeedFR = inputData[:,91] # mph ughhh...
+    wheelSpeedFR = inputData[:,91] # m/s
     wheelSpeedRL = inputData[:,81] # m/s
-    wheelSpeedRR = inputData[:,92] # mph ughhh...
+    wheelSpeedRR = inputData[:,92] # m/s
     steerWheelAngleRate = inputData[:,94]
     steerWheelAngle = inputData[:,93]
     brakePres = inputData[:,107]
@@ -98,8 +99,9 @@ def main():
     print("")
 
     for i, row in enumerate(inputData):
-        gpsSec = row[87]
-        gpsGenPosix[i,:] = gpsSec + timeOffset
+        # gpsSec = row[87] # rg UTC
+        gpsSec = row[40] # novatel UTC
+        gpsGenPosix[i,:] = gpsSec + timeOffset + 0.66 ### ADDED TO COMPENSATE FOR IMPERFECT GPS TIME FROM NOVATEL VIA CAN
         # print("new posix time:")
         # print(gpsGenPosix)
         forVnYaw =  row[57]*(np.pi/180)
@@ -117,8 +119,8 @@ def main():
         novRelVelX[i,:] = (np.cos(forNovYaw)*forNovEastVel + (-np.sin(forNovYaw)*forNovNorthVel))
         vnSpd[i,:] = np.sqrt((forVnVelNorth**2)+(forVnVelEast**2)+(forVnVelDown**2))
         novSpd[i,:] = np.sqrt((forNovNorthVel**2)+(forNovEastVel**2)+(forNovUpVel**2))
-        forWheelSpeedFR[i,:] = row[91] / 2.237 # mph to m/s
-        forWheelSpeedRR[i,:] = row[92] / 2.237 # mph to m/s        
+        forWheelSpeedFR[i,:] = row[91] ### / 2.237 # mph to m/s
+        forWheelSpeedRR[i,:] = row[92] ### / 2.237 # mph to m/s        
 
     dataOutput = np.column_stack((  gpsGenPosix,wheelSpeedFL,forWheelSpeedFR,
                                     wheelSpeedRL,forWheelSpeedRR,steerWheelAngle,brakePres,
@@ -151,10 +153,10 @@ def main():
     ### experiments
     plt.plot(gpsGenPosix, vnRelVelY, color='red', label='vn rel Y (lateral vel)')
     plt.plot(gpsGenPosix, vnRelVelX, color='orange', label='vn rel X (forward vel)')
-    plt.plot(gpsGenPosix, novRelVelY, label='novatel rel Y (forward vel)')
-    plt.plot(gpsGenPosix, novRelVelX, label='novatel rel X (lateral vel)')
-    plt.plot(gpsGenPosix, vnSpd, color='black', label='vn speed mag')
-    plt.plot(gpsGenPosix, novSpd, label='novatel speed mag')
+    # plt.plot(gpsGenPosix, novRelVelY, label='novatel rel Y (forward vel)')
+    # plt.plot(gpsGenPosix, novRelVelX, label='novatel rel X (lateral vel)')
+    # plt.plot(gpsGenPosix, vnSpd, color='black', label='vn speed mag')
+    # plt.plot(gpsGenPosix, novSpd, label='novatel speed mag')
     plt.plot(gpsGenPosix, zero)
     plt.ylabel('wheel speed (mph)')
     plt.legend()
@@ -174,8 +176,8 @@ def main():
     plt.plot(gpsGenPosix, vnVelNorth, color='red', label='north vel (m/s)')
     plt.plot(gpsGenPosix, vnVelEast, color='blue', label='east vel (m/s)')
     plt.plot(gpsGenPosix, vnVelDown, color='green', label='down vel (m/s)')
-    plt.plot(gpsGenPosix, novEastVel, label='novatel east vel (m/s)')
-    plt.plot(gpsGenPosix, novNorthVel, label='novatel north vel (m/s)')
+    # plt.plot(gpsGenPosix, novEastVel, label='novatel east vel (m/s)')
+    # plt.plot(gpsGenPosix, novNorthVel, label='novatel north vel (m/s)')
     plt.ylabel('vel (m/s)')
     plt.legend()
 
