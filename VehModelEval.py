@@ -20,11 +20,11 @@ def tuning():
     # tuning parameters for 2017 Honda Civic
     steering_ratio = 10.98
     steering_offset = 0.0
-    steering_ratio_speed_scalar = 0.45 # 0.4625 is a good value for out and back dataset
+    steering_ratio_speed_scalar = 0.44 # 0.4625 is a good value for out and back dataset
     wheel_base = 2.7 # meters 106.3 inches
     track_width = 1.5621 # meters 61.5 inches rear  
     rack_scalar = -1.0 # ratio
-    speed_scalar = 0.98 # ratio
+    speed_scalar = 0.98  # ratio
 
     return steering_ratio, steering_offset, wheel_base, track_width, rack_scalar, speed_scalar, steering_ratio_speed_scalar
 
@@ -42,22 +42,26 @@ def novatel_data():
     gps_body_vel_y = np.zeros((len(truth),1))
     gps_body_vel_z = np.zeros((len(truth),1))
     gps_gyro_z = np.zeros((len(truth),1))
+    gps_calc_vel_forward = np.zeros((len(truth),1))
+    gps_calc_vel_lateral = np.zeros((len(truth),1))
 
     # LLA to UTM conversion
     myProjTruth = Proj("+proj=utm +zone=10S, +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
     print('')
     print('converting truth lla to UTM...')
-    print('')
 
     for aa, row in enumerate(truth):
         _gps_time_truth = row[0]
         _gps_lat_truth = row[1]
         _gps_long_truth = row[2]
         _gps_gyro_z = row[9]
-        _gps_heading_truth = row[13]-2.84  ### IMPORTANT: this is to offset the imperfect installation of the IMU in the Honda
+        _gps_heading_truth = row[13] - 2.90  ### IMPORTANT: this is to offset the imperfect installation of the IMU in the Honda
         _gps_body_vel_x = row[19]
         _gps_body_vel_y = row[20]
         _gps_body_vel_z = row[21]
+        _gps_global_vel_north = row[16]
+        _gps_global_vel_east = row[17]
+        _gps_global_vel_up = row[18]
 
         # convert from -180 to 180 to 0 to 360
         if _gps_heading_truth < 0:
@@ -74,8 +78,10 @@ def novatel_data():
         gps_body_vel_y[aa,:] = _gps_body_vel_y
         gps_body_vel_z[aa,:] = _gps_body_vel_z
         gps_gyro_z[aa,:] = _gps_gyro_z
+        gps_calc_vel_forward[aa,:] = (np.sin(_gps_heading_truth * np.pi/180)*_gps_global_vel_east + np.cos(_gps_heading_truth * np.pi/180)*_gps_global_vel_north)
+        gps_calc_vel_lateral[aa,:] = (np.cos(_gps_heading_truth * np.pi/180)*_gps_global_vel_east + (-np.sin(_gps_heading_truth * np.pi/180)*_gps_global_vel_north))
 
-    return  gps_time_truth, gps_northing_truth, gps_easting_truth, gps_heading_truth, gps_body_vel_x, gps_body_vel_y, gps_body_vel_z, gps_gyro_z
+    return  gps_time_truth, gps_northing_truth, gps_easting_truth, gps_heading_truth, gps_body_vel_x, gps_body_vel_y, gps_body_vel_z, gps_gyro_z, gps_calc_vel_forward, gps_calc_vel_lateral
 
 
 def vehicle_data():
@@ -88,6 +94,7 @@ def vehicle_data():
     vn_accel_z = np.zeros((len(vehicle),1))
     avg_rear_axle_speed = np.zeros((len(vehicle),1))
     gps_time_vehicle = np.zeros((len(vehicle),1))
+    gps_time_VN_vehicle = np.zeros((len(vehicle),1))
     steering_wheel_angle = np.zeros((len(vehicle),1))
     wheel_speed_fl = np.zeros((len(vehicle),1))
     wheel_speed_fr = np.zeros((len(vehicle),1))
@@ -98,7 +105,7 @@ def vehicle_data():
     vn_roll = np.zeros((len(vehicle),1))
 
     ### time correction value for dealing with bad time reference ###
-    gps_time_vehicle_correction = -0.0
+    gps_time_vehicle_correction = 0.0 # seconds
 
     for i, row in enumerate(vehicle):
         _gps_time_vehicle = row[0]
@@ -113,6 +120,7 @@ def vehicle_data():
         _vn_yaw = row[7]
         _vn_pitch = row[8]
         _vn_roll = row[9]
+        _gps_time_vn_vehicle = row[24]
 
         vn_accel_x[i,:] = _vn_accel_x
         vn_accel_y[i,:] = _vn_accel_y
@@ -122,13 +130,14 @@ def vehicle_data():
         vn_roll[i,:] = _vn_roll
         avg_rear_axle_speed[i,:] = (_wheel_speed_rl+_wheel_speed_rr)/2 # speed at center of rear axle
         gps_time_vehicle[i,:] = _gps_time_vehicle + gps_time_vehicle_correction
+        gps_time_VN_vehicle[i,:] = _gps_time_vn_vehicle
         steering_wheel_angle[i,:] = _steer_wheel_angle
         wheel_speed_fl[i,:] = _wheel_speed_fl
         wheel_speed_fr[i,:] = _wheel_speed_fr
         wheel_speed_rl[i,:] = _wheel_speed_rl
         wheel_speed_rr[i,:] = _wheel_speed_rr
 
-    return gps_time_vehicle, wheel_speed_fl, wheel_speed_fr, wheel_speed_rl, wheel_speed_rr, steering_wheel_angle, vn_accel_x, vn_accel_y, vn_accel_z, vn_yaw, vn_pitch, vn_roll
+    return gps_time_vehicle, wheel_speed_fl, wheel_speed_fr, wheel_speed_rl, wheel_speed_rr, steering_wheel_angle, vn_accel_x, vn_accel_y, vn_accel_z, vn_yaw, vn_pitch, vn_roll, gps_time_VN_vehicle
 
 
 def main():
@@ -185,6 +194,7 @@ def main():
 
     ### theta calculation ###
     theta = np.zeros((len(novatel_state[0]),1))
+    theta_non_recursive = np.zeros((len(novatel_state[0]),1))
     theta_global = np.zeros((len(novatel_state[0]),1))
     theta_error_uncorrected = np.zeros((len(novatel_state[0]),1))
     theta_error_corrected = np.zeros((len(novatel_state[0]),1))
@@ -208,6 +218,7 @@ def main():
         dt = (i * 0.01)
         # theta[i,:] = (_speed/_wheel_base) * (np.tan(_rack_angle * np.pi/180)) * 0.01 + theta[i-1]
         theta[i,:] = (_speed/_wheel_base) * (np.tan(_rack_angle_model * np.pi/180)) * 0.01 + theta[i-1]
+        theta_non_recursive[i,:] = (_speed/_wheel_base) * (np.tan(_rack_angle_model * np.pi/180)) * 180/np.pi * -1
 
         ### theta error ###
         theta_error_uncorrected[i,:] = _rel_gps_heading - theta[i]
@@ -295,7 +306,7 @@ def main():
 
     dist_trav_error.plot(novatel_state[0], distance_traveled_error, label='percent error (%)')
     dist_trav_error.plot(novatel_state[0], zero)
-    dist_trav_error.set_ylim(-0.75,0.75)
+    dist_trav_error.set_ylim(-2,2)
     dist_trav_error.legend()
 
     orient.plot(novatel_state[0], interp_vn_pitch, label='pitch (deg)')
@@ -304,6 +315,7 @@ def main():
 
     gyro.plot(novatel_state[0], novatel_yaw_rate, label='novatel yaw rate (deg/sec)')
     gyro.plot(novatel_state[0], theta_global_rate, label='theta rate (deg/sec)')
+    gyro.plot(novatel_state[0], theta_non_recursive, label='theta non recursive (deg/sec)')
     gyro.legend()
 
     gyro_error.plot(novatel_state[0], theta_global_rate_error, label='yaw rate error (deg/sec)')
@@ -323,22 +335,44 @@ def main():
     plt.scatter(y_prediction, x_prediction, label='predicted path (m)')
     plt.legend()
 
-    fig2, (vel, accel, gyro) = plt.subplots(3,1, sharex=True)
-    fig2.suptitle('latency evaluation')
-    vel.plot(novatel_state[0], interp_avg_rear_axle_speed, label='rear axle speed CAN (m/s)')
-    vel.plot(novatel_state[0], novatel_state[5], label='forward velocity novatel (m/s)')
-    vel.legend()
+    # fig2, (vel, accel, gyro) = plt.subplots(3,1, sharex=True)
+    # fig2.suptitle('latency evaluation')
+    # vel.plot(novatel_state[0], interp_avg_rear_axle_speed, label='rear axle speed CAN (m/s)')
+    # vel.plot(novatel_state[0], novatel_state[5], label='forward velocity novatel (m/s)')
+    # vel.legend()
     
-    accel.plot(novatel_state[0], interp_forward_accel, label='vn accel forward (m/s/s)')
-    accel.plot(novatel_state[0], interp_calc_forward_accel, label='calc accel forward (m/s/s)')
-    accel.plot(novatel_state[0], interp_filter_calc_forward_accel, label='filtered calc accel forward (m/s/s)')
-    accel.legend()    
+    # accel.plot(novatel_state[0], interp_forward_accel, label='vn accel forward (m/s/s)')
+    # accel.plot(novatel_state[0], interp_calc_forward_accel, label='calc accel forward (m/s/s)')
+    # accel.plot(novatel_state[0], interp_filter_calc_forward_accel, label='filtered calc accel forward (m/s/s)')
+    # accel.legend()    
 
-    gyro.plot(novatel_state[0], accel_error, label='calculated acceleration error (m/s/s)')
-    gyro.legend()
+    # gyro.plot(novatel_state[0], accel_error, label='calculated acceleration error (m/s/s)')
+    # gyro.legend()
+
+    fig3, (yr, yr_error, vel_fw, vel_lat) = plt.subplots(4,1, sharex=True)
+    fig3.suptitle('yaw rate estimation')
+    yr.plot(novatel_state[0], theta_non_recursive, color='red', label='estimated yaw rate (deg/sec)')
+    yr.plot(novatel_state[0], novatel_yaw_rate, color='green', label='novatel yaw rate (deg/sec)')
+    yr.legend()
+
+    yr_error.plot(novatel_state[0], theta_non_recursive - novatel_yaw_rate, label='yaw rate estimate error (deg/sec)')
+    yr_error.legend()
+
+    vel_fw.plot(novatel_state[0], interp_avg_rear_axle_speed, label='avg rear axle speed (m/s)')
+    vel_fw.plot(novatel_state[0], novatel_state[8], '-o', label='rotated forward vel novatel (m/s)')
+    vel_fw.legend()
+
+    vel_lat.plot(novatel_state[0], novatel_state[9], label='rotated lateral vel novatel (m/s)')
+    vel_lat.legend()
+
+    plt.figure(4)
+    plt.grid(b=True)
+    plt.scatter((theta_non_recursive - novatel_yaw_rate), interp_avg_rear_axle_speed)
+    plt.xlabel('yaw error (deg/sec)')
+    plt.ylabel('velocity (m/s)')
+    plt.legend()
 
     plt.show()
-
 
 if __name__=='__main__':
     main()

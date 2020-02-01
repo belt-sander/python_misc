@@ -2,7 +2,9 @@
 
 #!/usr/bin/python
 
+from __future__ import print_function
 import time
+import calendar
 import csv
 import argparse
 import datetime
@@ -42,102 +44,92 @@ def main():
     print(timeOffset)
     print("")
 
-    inputData = np.genfromtxt(args.input_csv, skip_header=100, delimiter=',')
+    inputData = np.genfromtxt(args.input_csv, skip_header=1000, delimiter=',')
     print("data has been imported")
     print("")
 
     # novatel UTC time == inputData[:,40]
-    gpsGenPosix = np.zeros((len(inputData),1))
     sysTime = inputData[:,0]
-    gpsTimeTest = inputData[:,87] 
-    avgSpd = inputData[:,1] # km/h
-    wheelSpeedFL = inputData[:,90] # m/s
-    wheelSpeedFR = inputData[:,91] # m/s
-    wheelSpeedRL = inputData[:,81] # m/s
-    wheelSpeedRR = inputData[:,92] # m/s
-    steerWheelAngleRate = inputData[:,94]
-    steerWheelAngle = inputData[:,93]
-    brakePres = inputData[:,107]
-    vnYaw = inputData[:,57]
-    vnPitch = inputData[:,60]
-    vnRoll = inputData[:,61]
-    vnVelNorth = inputData[:,56]
-    vnVelEast = inputData[:,55]
-    vnVelDown = inputData[:,62]
-    vnAccelX = inputData[:,63]
-    vnAccelY = inputData[:,64]
-    vnAccelZ = inputData[:,65]
-    vnGyroX = inputData[:,66]
-    vnGyroY = inputData[:,67]
-    vnGyroZ = inputData[:,68]
-    rgLat = inputData[:,100]
-    rgLong = inputData[:,101]
+    gpsTimeTest = inputData[:,72] 
+    avgSpd = inputData[:,1] # m/s
+    wheelSpeedFL = inputData[:,107] # m/s
+    wheelSpeedFR = inputData[:,108] # m/s
+    wheelSpeedRL = inputData[:,98] # m/s
+    wheelSpeedRR = inputData[:,109] # m/s
+    steerWheelAngleRate = inputData[:,111]
+    steerWheelAngle = inputData[:,110]
+    brakePres = inputData[:,126]
+    vnYaw = inputData[:,27]
+    vnPitch = inputData[:,28]
+    vnRoll = inputData[:,29]
+    vnVelX = inputData[:,44]
+    vnVelY = inputData[:,45]
+    vnVelZ = inputData[:,46]
+    vnAccelX = inputData[:,30]
+    vnAccelY = inputData[:,31]
+    vnAccelZ = inputData[:,32]
+    vnGyroX = inputData[:,33]
+    vnGyroY = inputData[:,34]
+    vnGyroZ = inputData[:,35]
+    vnLat = inputData[:,42]
+    vnLong = inputData[:,43]
+    vnSats = inputData[:,38]
     novYaw = inputData[:,19]
-    novEastVel = inputData[:,33]
-    novNorthVel = inputData[:,32]
-    novUpVel = inputData[:,34]
+    novEastVel = inputData[:,131] # mph
+    novNorthVel = inputData[:,133] # mph
+    novUpVel = inputData[:,135] # mph
 
     ### rotation test ###
-    vnRelVelX = np.zeros((len(inputData),1))
-    vnRelVelY = np.zeros((len(inputData),1))
     novRelVelY = np.zeros((len(inputData),1))
     novRelVelX = np.zeros((len(inputData),1))    
     vnSpd = np.zeros((len(inputData),1))
     novSpd = np.zeros((len(inputData),1))
 
-    ### differentiation test
-    avg_speed_post = np.zeros((len(inputData),1))
-    diff_speed_post = np.zeros((len(inputData),1))
-    filtered_accel_error = np.zeros((len(inputData),1))
-    zero = np.zeros((len(inputData),1))
+    print('iterating through data...')
+    print('')
 
-    ### fixing stupid units
-    forWheelSpeedFR = np.zeros((len(inputData),1))
-    forWheelSpeedRR = np.zeros((len(inputData),1))
-
-    print("iterating through data...")
-    print("")
+    gpsGenPosix = np.zeros((len(inputData),1))
+    gpsVnGenPosix = np.zeros((len(inputData),1))
+    gpsErrorPosix = np.zeros((len(inputData),1))
 
     for i, row in enumerate(inputData):
         # gpsSec = row[87] # rg UTC
-        gpsSec = row[40] # novatel UTC
-        gpsGenPosix[i,:] = gpsSec + timeOffset + 0.66 ### ADDED TO COMPENSATE FOR IMPERFECT GPS TIME FROM NOVATEL VIA CAN
-        # print("new posix time:")
-        # print(gpsGenPosix)
-        forVnYaw =  row[57]*(np.pi/180)
-        forNovYaw = (row[19]-2.5)*(np.pi/180) ### added value to try and calibrate out lateral velocity error
-        forVnVelNorth = row[56]
-        forVnVelEast = row[55]
-        forVnVelDown = row[62]
-        forNovEastVel = row[112]
-        forNovNorthVel = row[114]
-        forNovUpVel = row[116]
+        gpsSec = row[72] # novatel UTC
+        gpsGenPosix[i,:] = gpsSec + timeOffset ### ADDED TO COMPENSATE FOR IMPERFECT GPS TIME FROM NOVATEL VIA CAN
 
-        vnRelVelX[i,:] = (np.sin(forVnYaw)*forVnVelEast + np.cos(forVnYaw)*forVnVelNorth)
-        vnRelVelY[i,:] = (np.cos(forVnYaw)*forVnVelEast + (-np.sin(forVnYaw)*forVnVelNorth))
-        novRelVelY[i,:] = (np.sin(forNovYaw)*forNovEastVel + np.cos(forNovYaw)*forNovNorthVel)
-        novRelVelX[i,:] = (np.cos(forNovYaw)*forNovEastVel + (-np.sin(forNovYaw)*forNovNorthVel))
-        vnSpd[i,:] = np.sqrt((forVnVelNorth**2)+(forVnVelEast**2)+(forVnVelDown**2))
-        novSpd[i,:] = np.sqrt((forNovNorthVel**2)+(forNovEastVel**2)+(forNovUpVel**2))
-        forWheelSpeedFR[i,:] = row[91] ### / 2.237 # mph to m/s
-        forWheelSpeedRR[i,:] = row[92] ### / 2.237 # mph to m/s        
+        _year = int(row[52])
+        _month = int(row[53])
+        _day = int(row[54])
+        _hour = int(row[55]) 
+        _minute = int(row[56])
+        _second = int(row[57])
+        _ms = int(row[58] * 1000) ### millisecond to microsecond
 
-    dataOutput = np.column_stack((  gpsGenPosix,wheelSpeedFL,forWheelSpeedFR,
-                                    wheelSpeedRL,forWheelSpeedRR,steerWheelAngle,brakePres,
+        # print('year: ', _year, ' month: ', _month, ' day: ', _day, ' hour: ', _hour, ' minute: ', _minute, ' second: ', _second, ' microsecond: ', _ms)
+
+        _time_tuple = calendar.timegm((_year, _month, _day, _hour, _minute, _second)) + _ms/1e6
+        gpsVnGenPosix[i,:] = _time_tuple
+        gpsErrorPosix[i,:] = gpsVnGenPosix[i] - gpsGenPosix[i]
+        # print('time error: ', gpsErrorPosix[i])
+
+    gpsGenPosixCorrected = np.zeros((len(inputData),1))
+    gpsGenPosixCorrected = gpsGenPosix + np.mean(gpsErrorPosix)
+
+    dataOutput = np.column_stack((  gpsGenPosixCorrected,wheelSpeedFL,wheelSpeedFR,
+                                    wheelSpeedRL,wheelSpeedRR,steerWheelAngle,brakePres,
                                     vnYaw,vnPitch,vnRoll,vnAccelX,
                                     vnAccelY,vnAccelZ,vnGyroX,vnGyroY,
-                                    vnGyroZ,rgLat,rgLong, vnVelNorth, 
-                                    vnVelEast, vnVelDown, novEastVel, novNorthVel, 
-                                    novUpVel    ))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosix(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), rg lat(dd), rg long(dd), vnVelX(mph), vnVelY(mph), vnVelZ(mph), novEastVel(mph), novNorthVel(mph), novUpVel(mph)", comments='')
-    print("data has been exported")
-    print("")
+                                    vnGyroZ,vnLat,vnLong, vnVelX, 
+                                    vnVelY, vnVelZ, novEastVel, novNorthVel, 
+                                    novUpVel, gpsVnGenPosix ))
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosixCorrected(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), vn lat(dd), vn long(dd), vnVelX(mph), vnVelY(mph), vnVelZ(mph), novEastVel(mph), novNorthVel(mph), novUpVel(mph), gps time VN(s)", comments='')
 
-    diff_speed_post = np.gradient(np.reshape((avg_speed_post/2.237), len(inputData)),0.01)
-    filtered_diff_speed_post = savgol_filter(diff_speed_post,111,1)
-    filtered_vn_accel_x = savgol_filter(vnAccelX,111,1)
-    filtered_accel_error = filtered_diff_speed_post - filtered_vn_accel_x
-        
+    print('data has been exported')
+    print('')
+
+    print('gps time error mean: ', np.mean(gpsErrorPosix))
+    print('')
+
     ### dark mode
     plt.style.use('dark_background')
 
@@ -145,39 +137,26 @@ def main():
     plt.figure(1)
     plt.subplot(211)
     plt.title("velocity / speed data")
-    plt.plot(gpsGenPosix, forWheelSpeedRR, color='gold', label='rr wheel (CAN) m/s')
+    plt.plot(gpsGenPosix, wheelSpeedRR, color='gold', label='rr wheel (CAN) m/s')
     plt.plot(gpsGenPosix, wheelSpeedRL, color='red', label='rl wheel (CAN) m/s')
     plt.plot(gpsGenPosix, wheelSpeedFL, color='green', label='fl wheel (CAN) m/s')
-    plt.plot(gpsGenPosix, forWheelSpeedFR, color='blue', label='fr wheel (CAN) m/s')
-
-    ### experiments
-    plt.plot(gpsGenPosix, vnRelVelY, color='red', label='vn rel Y (lateral vel)')
-    plt.plot(gpsGenPosix, vnRelVelX, color='orange', label='vn rel X (forward vel)')
-    # plt.plot(gpsGenPosix, novRelVelY, label='novatel rel Y (forward vel)')
-    # plt.plot(gpsGenPosix, novRelVelX, label='novatel rel X (lateral vel)')
-    # plt.plot(gpsGenPosix, vnSpd, color='black', label='vn speed mag')
-    # plt.plot(gpsGenPosix, novSpd, label='novatel speed mag')
-    plt.plot(gpsGenPosix, zero)
-    plt.ylabel('wheel speed (mph)')
+    plt.plot(gpsGenPosix, wheelSpeedFR, color='blue', label='fr wheel (CAN) m/s')
+    plt.plot(gpsGenPosix, vnVelX, color='purple', label='forward velocity (m/s)')
     plt.legend()
 
     plt.subplot(212)
     plt.plot(gpsGenPosix, steerWheelAngle, label='actual steering wheel angle (deg)')
-    plt.plot(gpsGenPosix, (steerWheelAngle/10.93), label='front wheel angle (deg)') # front wheel angle after steering ratio reduction
     plt.legend()
     plt.ylabel('SA (degrees)')
-    plt.xlabel('utc time (s)')
-
+    plt.xlabel('novatel utc time (s)')
 
     ### global velocity / rotated body velocity
     plt.figure(2)
     plt.subplot(311)
-    plt.title("global velocity")
-    plt.plot(gpsGenPosix, vnVelNorth, color='red', label='north vel (m/s)')
-    plt.plot(gpsGenPosix, vnVelEast, color='blue', label='east vel (m/s)')
-    plt.plot(gpsGenPosix, vnVelDown, color='green', label='down vel (m/s)')
-    # plt.plot(gpsGenPosix, novEastVel, label='novatel east vel (m/s)')
-    # plt.plot(gpsGenPosix, novNorthVel, label='novatel north vel (m/s)')
+    plt.title("body frame velocity")
+    plt.plot(gpsGenPosix, vnVelX, color='red', label='forward vel (m/s)')
+    plt.plot(gpsGenPosix, vnVelY, color='blue', label='lateral vel (m/s)')
+    plt.plot(gpsGenPosix, vnVelZ, color='green', label='up/down vel (m/s)')
     plt.ylabel('vel (m/s)')
     plt.legend()
 
@@ -193,8 +172,26 @@ def main():
     plt.plot(gpsGenPosix, vnGyroZ, label='gyro Z (deg/sec)')
     plt.plot(gpsGenPosix, vnGyroY, label='gyro Y (deg/sec)')
     plt.plot(gpsGenPosix, vnGyroX, label='gyro X (deg/sec)')     
-    plt.xlabel('utc time (s)')
+    plt.xlabel('novatel utc time (s)')
     plt.legend()
+
+    plt.figure(3)
+    plt.subplot(311)
+    plt.plot(gpsGenPosix, gpsVnGenPosix, label='gps time vn (s)')
+    plt.plot(gpsGenPosix, gpsGenPosixCorrected, label='corrected gps time (s)')
+    plt.ylabel('vn utc time (s)')
+    plt.legend()
+
+    plt.subplot(312)
+    plt.plot(gpsGenPosix, gpsErrorPosix, label='vn time - novatel time (s)')
+    plt.legend()
+
+    plt.subplot(313)
+    plt.plot(gpsGenPosix, vnSats, label='vn sat count')
+    plt.xlabel('novatel utc time (s)')
+    plt.legend()
+
+
 
     plt.show()
 
