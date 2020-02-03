@@ -20,7 +20,7 @@ def tuning():
     # tuning parameters for 2017 Honda Civic
     steering_ratio = 10.98
     steering_offset = 0.0
-    steering_ratio_speed_scalar = 0.44 # 0.4625 is a good value for out and back dataset
+    steering_ratio_speed_scalar = 0.4625 # 0.4625 is a good value for out and back dataset
     wheel_base = 2.7 # meters 106.3 inches
     track_width = 1.5621 # meters 61.5 inches rear  
     rack_scalar = -1.0 # ratio

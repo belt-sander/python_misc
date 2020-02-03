@@ -160,14 +160,12 @@ def main():
     plt.ylabel('vel (m/s)')
     plt.legend()
 
-    ### orientation
     plt.subplot(312)
     plt.plot(gpsGenPosix, vnYaw, label='vn yaw (deg)')
     plt.plot(gpsGenPosix, vnPitch, label='vn pitch (deg)')
     plt.plot(gpsGenPosix, vnRoll, label='vn roll (deg)')
     plt.legend()
 
-    ### gyro z 
     plt.subplot(313)
     plt.plot(gpsGenPosix, vnGyroZ, label='gyro Z (deg/sec)')
     plt.plot(gpsGenPosix, vnGyroY, label='gyro Y (deg/sec)')
@@ -175,23 +173,27 @@ def main():
     plt.xlabel('novatel utc time (s)')
     plt.legend()
 
-    plt.figure(3)
-    plt.subplot(311)
-    plt.plot(gpsGenPosix, gpsVnGenPosix, label='gps time vn (s)')
-    plt.plot(gpsGenPosix, gpsGenPosixCorrected, label='corrected gps time (s)')
-    plt.ylabel('vn utc time (s)')
-    plt.legend()
+    fig1, (time_plot, error, sats, accel, gyro) = plt.subplots(5,1, sharex=True)
+    fig1. suptitle('time / data checks')
+    time_plot.plot(gpsGenPosix, gpsVnGenPosix, label='gps time vn (s)')
+    time_plot.plot(gpsGenPosix, gpsGenPosixCorrected, label='corrected gps time (s)')
+    time_plot.legend()
 
-    plt.subplot(312)
-    plt.plot(gpsGenPosix, gpsErrorPosix, label='vn time - novatel time (s)')
-    plt.legend()
+    error.plot(gpsGenPosix, gpsErrorPosix, label='vn time - novatel time (s)')
+    error.legend()
 
-    plt.subplot(313)
-    plt.plot(gpsGenPosix, vnSats, label='vn sat count')
-    plt.xlabel('novatel utc time (s)')
-    plt.legend()
+    sats.plot(gpsGenPosix, vnSats, label='vn sat count')
+    sats.legend()
 
+    accel.plot(gpsGenPosix, vnAccelX, label='accel x (m/s/s)')
+    accel.plot(gpsGenPosix, vnAccelY, label='accel y (m/s/s)')
+    accel.plot(gpsGenPosix, vnAccelZ, label='accel z (m/s/s)')
+    accel.legend()
 
+    gyro.plot(gpsGenPosix, vnGyroX, label='gyro x (deg/sec)')
+    gyro.plot(gpsGenPosix, vnGyroY, label='gyro y (deg/sec)')
+    gyro.plot(gpsGenPosix, vnGyroZ, label='gyro z (deg/sec)')
+    gyro.legend()
 
     plt.show()
 
