@@ -15,20 +15,9 @@ from scipy.signal import savgol_filter
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='convert MoTeC i2 gps time / date to posix')
 
-    arg_parser.add_argument('-i',
-                            '--input_csv', 
-                            required=True, 
-                            help='MoTeC i2 csv output')
-    arg_parser.add_argument('-d',
-                            '--date',
-                            required=True,
-                            type=str,
-                            help='Date (day, month, year) that data was recorded in format <xx-xx-xxxx>')
-    arg_parser.add_argument('-o',
-                            '--output',
-                            required=True,
-                            help='corrected log file output location')
-
+    arg_parser.add_argument('-i', '--input_csv', required=True, help='MoTeC i2 csv output')
+    arg_parser.add_argument('-d', '--date' required=True, type=str, help='Date (day, month, year) that data was recorded in format <xx-xx-xxxx>')
+    arg_parser.add_argument('-o', '--output', required=True, help='corrected log file output location')
     return arg_parser.parse_args()
 
 def main():

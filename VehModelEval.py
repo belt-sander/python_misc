@@ -83,8 +83,11 @@ def novatel_data():
 
     return  gps_time_truth, gps_northing_truth, gps_easting_truth, gps_heading_truth, gps_body_vel_x, gps_body_vel_y, gps_body_vel_z, gps_gyro_z, gps_calc_vel_forward, gps_calc_vel_lateral
 
+def vehicle_data_ford():
+    args = parse_args()
+    vehicleDataFord = np.genfromtxt(args.vehicleDataFord, skip_header=1, delimiter=' ')
 
-def vehicle_data():
+def vehicle_data_honda():
     args = parse_args() 
     vehicle = np.genfromtxt(args.vehicleData, skip_header=1, skip_footer=1, delimiter=' ')
 
@@ -142,7 +145,7 @@ def vehicle_data():
 
 def main():
     tuning_values = tuning()
-    vehicle_state = vehicle_data()
+    vehicle_state = vehicle_data_honda()
     novatel_state = novatel_data()
 
     evaluation_gps_time = np.resize(vehicle_state[0], np.size(vehicle_state[0]))
@@ -306,7 +309,7 @@ def main():
 
     dist_trav_error.plot(novatel_state[0], distance_traveled_error, label='percent error (%)')
     dist_trav_error.plot(novatel_state[0], zero)
-    dist_trav_error.set_ylim(-2,2)
+    dist_trav_error.set_ylim(-1,1)
     dist_trav_error.legend()
 
     orient.plot(novatel_state[0], interp_vn_pitch, label='pitch (deg)')
@@ -359,7 +362,7 @@ def main():
     yr_error.legend()
 
     vel_fw.plot(novatel_state[0], interp_avg_rear_axle_speed, label='avg rear axle speed (m/s)')
-    vel_fw.plot(novatel_state[0], novatel_state[8], '-o', label='rotated forward vel novatel (m/s)')
+    vel_fw.plot(novatel_state[0], novatel_state[8], label='rotated forward vel novatel (m/s)')
     vel_fw.legend()
 
     vel_lat.plot(novatel_state[0], novatel_state[9], label='rotated lateral vel novatel (m/s)')
