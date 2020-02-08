@@ -18,7 +18,8 @@ def parse_args():
     arg_parser.add_argument('-i', '--input_csv', required=True, help='MoTeC i2 csv output')
     arg_parser.add_argument('-d', '--date', required=True, type=str, help='Date (day, month, year) that data was recorded in format <xx-xx-xxxx>')
     arg_parser.add_argument('-o', '--output', required=True, help='corrected log file output location')
-    arg_parser.add_argument('-r', '--radius', required=True, type=float, help='tire radius (meters) from vehicle to convert rad/sec to m/s') ### 0.40513 for velodyne f150 king ranch
+    arg_parser.add_argument('-n', '--fake_novatel', required=True, help='generated "novatel" output from vehicle state data')
+    arg_parser.add_argument('-r', '--radius', required=True, type=float, help='tire radius (meters) from vehicle to convert rad/sec to m/s (0.40513 f150)') ### 0.40513 for velodyne f150 king ranch
     return arg_parser.parse_args()
 
 def main():
@@ -69,6 +70,7 @@ def main():
     novUpVel = np.zeros((len(inputData),1))
     gpsVnGenPosix = np.zeros((len(inputData),1))
     gpsErrorPosix = np.zeros((len(inputData),1))
+    zero = np.zeros((len(inputData),1))
 
     for i, row in enumerate(inputData):
         _year = int(row[100]) + 2000
@@ -90,8 +92,16 @@ def main():
                                     vnAccelY,vnAccelZ,vnGyroX,vnGyroY,
                                     vnGyroZ,vnLat,vnLong, vnVelX, 
                                     vnVelY, vnVelZ, novEastVel, novNorthVel, 
-                                    novUpVel, gpsVnGenPosix ))
+                                    novUpVel, gpsVnGenPosix))
     np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsVnPosix(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), vn lat(dd), vn long(dd), vnVelX(mph), vnVelY(mph), vnVelZ(mph), novEastVel(mph), novNorthVel(mph), novUpVel(mph), gps time VN(s)", comments='')
+
+    dataOutputFakeNovatel = np.column_stack((   gpsVnGenPosix, vnLat, vnLong, zero,
+                                                vnAccelX, vnAccelY, vnAccelZ, vnGyroX * 180/np.pi,
+                                                vnGyroY * 180/np.pi, ((vnGyroZ * 180/np.pi) * 1), zero, zero, 
+                                                zero, vnYaw, vnPitch, vnRoll, 
+                                                zero, zero, zero, vnVelY, 
+                                                vnVelX, vnVelZ))
+    np.savetxt(args.fake_novatel, dataOutputFakeNovatel, fmt='%.8f', delimiter=' ', header='#gpsVnGenPosix, vnLat, vnLong, zero, vnAccelX, vnAccelY, vnAccelZ, vnGyroX, vnGyroY, vnGyroZ, zero, zero, zero, vnYaw, vnPitch, vnRoll, zero, zero, zero, vnVelX, vnVelY, vnVelZ')
 
     ### dark mode
     plt.style.use('dark_background')

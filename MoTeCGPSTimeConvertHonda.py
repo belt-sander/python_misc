@@ -16,8 +16,9 @@ def parse_args():
     arg_parser = argparse.ArgumentParser(description='convert MoTeC i2 gps time / date to posix')
 
     arg_parser.add_argument('-i', '--input_csv', required=True, help='MoTeC i2 csv output')
-    arg_parser.add_argument('-d', '--date' required=True, type=str, help='Date (day, month, year) that data was recorded in format <xx-xx-xxxx>')
+    arg_parser.add_argument('-d', '--date', required=True, type=str, help='Date (day, month, year) that data was recorded in format <xx-xx-xxxx>')
     arg_parser.add_argument('-o', '--output', required=True, help='corrected log file output location')
+    arg_parser.add_argument('-n', '--fake_novatel', required=True, help='generated "novatel" output from vehicle state data')
     return arg_parser.parse_args()
 
 def main():
@@ -33,7 +34,7 @@ def main():
     print(timeOffset)
     print("")
 
-    inputData = np.genfromtxt(args.input_csv, skip_header=1000, delimiter=',')
+    inputData = np.genfromtxt(args.input_csv, skip_header=150, skip_footer=100, delimiter=',')
     print("data has been imported")
     print("")
 
@@ -73,6 +74,7 @@ def main():
     novRelVelX = np.zeros((len(inputData),1))    
     vnSpd = np.zeros((len(inputData),1))
     novSpd = np.zeros((len(inputData),1))
+    zero = np.zeros((len(inputData),1))
 
     print('iterating through data...')
     print('')
@@ -112,6 +114,14 @@ def main():
                                     vnVelY, vnVelZ, novEastVel, novNorthVel, 
                                     novUpVel, gpsVnGenPosix ))
     np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsGenPosixCorrected(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), vn lat(dd), vn long(dd), vnVelX(mph), vnVelY(mph), vnVelZ(mph), novEastVel(mph), novNorthVel(mph), novUpVel(mph), gps time VN(s)", comments='')
+
+    dataOutputFakeNovatel = np.column_stack((   gpsVnGenPosix, vnLat, vnLong, zero,
+                                                vnAccelX, vnAccelY, vnAccelZ, vnGyroX * 180/np.pi,
+                                                vnGyroY * 180/np.pi, (-vnGyroZ * 180/np.pi), zero, zero, 
+                                                zero, vnYaw, vnPitch, vnRoll, 
+                                                zero, zero, zero, vnVelX, 
+                                                vnVelY, vnVelZ))
+    np.savetxt(args.fake_novatel, dataOutputFakeNovatel, fmt='%.8f', delimiter=' ', header='#gpsVnGenPosix, vnLat, vnLong, zero, vnAccelX, vnAccelY, vnAccelZ, vnGyroX, vnGyroY, vnGyroZ, zero, zero, zero, vnYaw, vnPitch, vnRoll, zero, zero, zero, vnVelX, vnVelY, vnVelZ')
 
     print('data has been exported')
     print('')
