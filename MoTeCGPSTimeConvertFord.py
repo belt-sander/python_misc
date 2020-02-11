@@ -93,7 +93,7 @@ def main():
                                     vnGyroZ,vnLat,vnLong, vnVelX, 
                                     vnVelY, vnVelZ, novEastVel, novNorthVel, 
                                     novUpVel, gpsVnGenPosix))
-    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsVnPosix(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), vn lat(dd), vn long(dd), vnVelX(mph), vnVelY(mph), vnVelZ(mph), novEastVel(mph), novNorthVel(mph), novUpVel(mph), gps time VN(s)", comments='')
+    np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsVnPosix(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), vn lat(dd), vn long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s), novEastVel(mph), novNorthVel(mph), novUpVel(mph), gps time VN(s)", comments='')
 
     dataOutputFakeNovatel = np.column_stack((   gpsVnGenPosix, vnLat, vnLong, zero,
                                                 vnAccelX, vnAccelY, vnAccelZ, vnGyroX * 180/np.pi,
