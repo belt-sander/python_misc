@@ -96,8 +96,8 @@ def main():
     np.savetxt(args.output, dataOutput, fmt='%.8f', delimiter=' ', header="# gpsVnPosix(s),wheelSpeedFL(m/s),wheelSpeedFR(m/s),wheelSpeedRL(m/s),wheelSpeedRR(m/s),steerWheelAngle(deg),BrakePres(unitless),vnYaw(deg),vnPitch(deg),vnRoll(deg),vnAccelX(m/s/s),vnAccelY(m/s/s),vnAccelZ(m/s/s),vnGyroX(deg/s),vnGyroY(deg/s),vnGyroZ(deg/s), vn lat(dd), vn long(dd), vnVelX(m/s), vnVelY(m/s), vnVelZ(m/s), novEastVel(mph), novNorthVel(mph), novUpVel(mph), gps time VN(s)", comments='')
 
     dataOutputFakeNovatel = np.column_stack((   gpsVnGenPosix, vnLat, vnLong, zero,
-                                                vnAccelX, vnAccelY, vnAccelZ, vnGyroX * 180/np.pi,
-                                                vnGyroY * 180/np.pi, ((vnGyroZ * 180/np.pi) * 1), zero, zero, 
+                                                vnAccelX, vnAccelY, vnAccelZ, vnGyroX,
+                                                vnGyroY, vnGyroZ, zero, zero, 
                                                 zero, vnYaw, vnPitch, vnRoll, 
                                                 zero, zero, zero, vnVelY, 
                                                 vnVelX, vnVelZ))
@@ -143,6 +143,11 @@ def main():
     plt.plot(gpsVnGenPosix, vnGyroY, label='gyro Y (deg/sec)')
     plt.plot(gpsVnGenPosix, vnGyroX, label='gyro X (deg/sec)')     
     plt.legend()
+
+    plt.figure(3)
+    plt.scatter(vnLat, vnLong, label='position (lla)')
+    plt.legend()
+
 
     plt.show()
 

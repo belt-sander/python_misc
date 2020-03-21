@@ -177,8 +177,8 @@ def vehicle_data():
     return gps_time_vehicle, wheel_speed_fl, wheel_speed_fr, wheel_speed_rl, wheel_speed_rr, steering_wheel_angle, vn_accel_x, vn_accel_y, vn_accel_z, vn_yaw, vn_pitch, vn_roll, gps_time_VN_vehicle, vn_lat, vn_lon, vn_northing, vn_easting
 
 def main():
-    # tuning_values = tuning_honda()
-    tuning_values = tuning_ford()
+    tuning_values = tuning_honda()
+    # tuning_values = tuning_ford()
     vehicle_state = vehicle_data()
     novatel_state = novatel_data()
 
