@@ -42,9 +42,30 @@ def main():
 	_gyro_y = data[:,11]
 	_gyro_z = data[:,12]
 
+	gyro_x_bias = np.mean(_gyro_x)
+	gyro_y_bias = np.mean(_gyro_y)
+	gyro_z_bias = np.mean(_gyro_z)
+
+	ax_bias = np.mean(_acc_x)
+	ay_bias = np.mean(_acc_y)
+	az_bias = np.mean(_acc_z)
+
+	int_roll = np.cumsum(_gyro_x) * 100.0
+	int_roll_bias_corr = (np.cumsum(_gyro_x - gyro_x_bias)) + _roll[0]
+
+	int_pitch = np.cumsum(_gyro_y) * 100.0
+	int_pitch_bias_corr = (np.cumsum(_gyro_y - gyro_y_bias)) + _pitch[0]
+
+	int_yaw = np.cumsum(_gyro_z) * 100.0
+	int_yaw_bias_corr = (np.cumsum(_gyro_z - gyro_z_bias)) + _yaw[0]
+
+
 	print('mean gyro_x: ', '%.6f' % np.mean(_gyro_x))
 	print('mean gyro_y: ', '%.6f' % np.mean(_gyro_y))
 	print('mean gyro_z: ', '%.6f' % np.mean(_gyro_z))
+	print('mean acc_x: ', '%.6f' % ax_bias)
+	print('mean acc_y: ', '%.6f' % ay_bias)
+	print('mean acc_z: ', '%.6f' % az_bias)
 
 	gao_data, (gyro_x, gyro_y, gyro_z, ax, ay, az, y, p, r) = plt.subplots(9,1, sharex=True)
 	gao_data.suptitle('gyro / accel / ypr')
@@ -60,13 +81,15 @@ def main():
 	ay.legend()
 	az.plot(_acc_z, label='accel z m/s/s')
 	az.legend()
-	y.plot(_yaw, label='yaw degrees', color='Orange')
+	y.plot(_yaw, label='yaw degrees', color='orange')
+	y.plot(int_yaw_bias_corr, label='integrated yaw deg minus bias')
 	y.legend()
-	p.plot(_pitch, label='pitch degrees', color='Orange')
+	p.plot(_pitch, label='pitch degrees', color='orange')
+	p.plot(int_pitch_bias_corr, label='integrated pitch deg minus bias')
 	p.legend()
-	r.plot(_roll, label='roll degrees', color='Orange')
+	r.plot(_roll, label='roll degrees', color='orange')
+	r.plot(int_roll_bias_corr, label='integrated roll deg minus bias')
 	r.legend()
-
 
 	plt.show()
 
