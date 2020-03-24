@@ -29,6 +29,13 @@ def main():
 	# gyro_y = np.zeros((len(data),1))
 	# gyro_z = np.zeros((len(data),1))
 
+	_num = np.zeros((len(data),1),dtype=int)
+
+	for i, row in enumerate(data):
+		_num[i,:] = i
+
+	_num_resize = np.resize(_num, (1, np.size(data)))
+
 	_yaw = data[:,1]
 	_pitch = data[:,2]	
 	_roll = data[:,3]
@@ -50,13 +57,13 @@ def main():
 	ay_bias = np.mean(_acc_y)
 	az_bias = np.mean(_acc_z)
 
-	int_roll = np.cumsum(_gyro_x) * 100.0
+	int_roll = np.cumsum(_gyro_x) * 50.0
 	int_roll_bias_corr = (np.cumsum(_gyro_x - gyro_x_bias)) + _roll[0]
 
-	int_pitch = np.cumsum(_gyro_y) * 100.0
+	int_pitch = np.cumsum(_gyro_y) * 50.0
 	int_pitch_bias_corr = (np.cumsum(_gyro_y - gyro_y_bias)) + _pitch[0]
 
-	int_yaw = np.cumsum(_gyro_z) * 100.0
+	int_yaw = np.cumsum(_gyro_z) * 50.0
 	int_yaw_bias_corr = (np.cumsum(_gyro_z - gyro_z_bias)) + _yaw[0]
 
 
@@ -91,7 +98,27 @@ def main():
 	r.plot(int_roll_bias_corr, label='integrated roll deg minus bias')
 	r.legend()
 
+	fig, (gx, gy, gz) = plt.subplots(3,1, sharex=True, sharey=True)
+	fig.suptitle('gyro biases')
+	gx.hist(_gyro_x,100, label='gyro x', density=True, facecolor='g', alpha=0.75)
+	gx.legend()
+	gy.hist(_gyro_y,100, label='gyro y', density=True, facecolor='r', alpha=0.75)
+	gy.legend()
+	gz.hist(_gyro_z,100, label='gyro z', density=True, facecolor='b', alpha=0.75)
+	gz.legend()
+
+	fig2, (ax, ay, az) = plt.subplots(3,1, sharex=False, sharey=True)
+	fig2.suptitle('accel biases')
+	ax.hist(_acc_x,100, label='accel x', density=True, facecolor='g', alpha=0.75)
+	ax.legend()
+	ay.hist(_acc_y,100, label='accel y', density=True, facecolor='r', alpha=0.75)
+	ay.legend()
+	az.hist(_acc_z,100, label='accel z', density=True, facecolor='b', alpha=0.75)
+	az.legend()
+
 	plt.show()
+
+
 
 if __name__=='__main__':
 	main()
