@@ -38,12 +38,6 @@ def main():
 		_z1 = row[2]
 		_r1 = row[3]
 
-		x1[i,:] = _x1
-		y1[i,:] = _y1
-		z1[i,:] = _z1 + 2 ### z height offset
-		r1[i,:] = _r1 / 255.0
-		one1[i,:] = 1.0
-
 		### rotation tests ###
 		'''
 		reference frame of lidar (velarray) is:
@@ -57,6 +51,12 @@ def main():
 		_rotation_matrix = _rotation.as_matrix()	
 		_rotated_output = np.matmul(_rotation_matrix, _point_array)		
 		_rotated_point_array = np.reshape(_rotated_output, len(_rotated_output))
+
+		x1[i,:] = _x1
+		y1[i,:] = _y1
+		z1[i,:] = _z1 + 2 ### z height offset
+		r1[i,:] = _r1 / 255.0
+		one1[i,:] = 1.0
 
 		z1_rot[i,:] = _rotated_point_array[2] + 2 ### z height offset
 		x1_rot[i,:] = _rotated_point_array[0]
