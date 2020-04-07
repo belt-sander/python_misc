@@ -3,8 +3,6 @@ various python tools for data analysis and data capture
 
 ## Brief
 
-These tools allow a user to capture and process data from specific sensors, with specific configurations, from Novatel and VectorNav. 
-
 Most of these tools are really just a place for me to store things that have been useful at somepoint in the past. And, to prevent me from having to open excel for any reason. 
 
 ## VNLogAsync.py
