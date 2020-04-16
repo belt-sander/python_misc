@@ -3,12 +3,10 @@
 import sys
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 import time
-from scipy.spatial.transform import Rotation as R
 
 def parse_args():
-	arg_parser = argparse.ArgumentParser(description='simple visualization tool for xyzr data')
+	arg_parser = argparse.ArgumentParser(description='simple file cleaner')
 	arg_parser.add_argument('-i', '--input',  required=True, help='raw text file in which you want to clean')
 	arg_parser.add_argument('-o', '--output', required=True, help='place to save text files')
 	arg_parser.add_argument('-d', '--debug', required=False, default='False', help='print output of original text file, line by line')
@@ -24,14 +22,17 @@ def main():
 		output_c = output_b.replace('"','')
 		output_d = output_c.replace('[','')
 		output_e = output_d.replace(']','')
+		output_f = output_e.replace('(','')
+		output_g = output_f.replace(')','')
+		output_h = output_g.replace('#', ' 0x')
 
 		if args.debug == 'True':
-			print(output_e)
+			print(output_h)
 			time.sleep(1.0)
 		
 
 		# write to new text file
-		cleaned_file.write(output_e)
+		cleaned_file.write(output_h)
 	print('done.')
 
 if __name__=='__main__':
