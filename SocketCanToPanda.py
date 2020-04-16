@@ -45,6 +45,23 @@ def cleaner():
 			cleaned_file.write(new_data_b)
 	print('done cleaning.')
 
+def arrange():
+	args = parse_args()
+	file = np.genfromtxt(args.output, delimiter=' ', dtype=str)
+
+	print('starting arrange loop...')
+	for i, row in enumerate(file):
+		_time = row[0]
+		_bus = row[1]
+		_id = row[2]
+		_df = row[3]
+		_len = 8
+
+		output = [str(_bus), str(_id), str(_df), str(_len), str(_time)]
+		print(output)
+		with open (args.formatted, 'a') as file:
+			file.write(",".join(output) + '\n')
+
 if __name__=='__main__':
 	cleaner()
-
+	arrange()
