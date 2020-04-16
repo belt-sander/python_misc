@@ -18,6 +18,7 @@ def parse_args():
 def main():
 	args = parse_args()
 	scan1 = np.genfromtxt(args.scan_1)
+	print('scan1 size: ', len(scan1))
 
 	### scan 1 ###
 	x1 = np.zeros((len(scan1),1))
@@ -54,16 +55,20 @@ def main():
 
 		x1[i,:] = _x1
 		y1[i,:] = _y1
-		z1[i,:] = _z1 + 2 ### z height offset
+		z1[i,:] = _z1 
 		r1[i,:] = _r1 / 255.0
 		one1[i,:] = 1.0
 
-		z1_rot[i,:] = _rotated_point_array[2] + 2 ### z height offset
+		z1_rot[i,:] = _rotated_point_array[2] ### z height offset
 		x1_rot[i,:] = _rotated_point_array[0]
 		y1_rot[i,:] = _rotated_point_array[1]
 
 		if i > args.rows:
 			break
+
+	# print('x: ', x1)
+	# print('y: ', y1)
+	# print('z: ', z1)
 
 	pre_rotation_data = np.column_stack((x1, y1, z1))
 
