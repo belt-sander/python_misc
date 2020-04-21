@@ -10,9 +10,9 @@ def parse_args():
 	arg_parser = argparse.ArgumentParser(description='simple visualization tool for xyzr data')
 	arg_parser.add_argument('-row', '--rows', required=False, default=1000000, type=int, help='number of rows to process, default is 1000000')
 	arg_parser.add_argument('-s1', '--scan_1', required=True, help='xyzr scan 1')
-	arg_parser.add_argument('-r', '--roll', type=int, required=True, help='roll in degrees')
-	arg_parser.add_argument('-p', '--pitch', type=int, required=True, help='pitch in degrees')
-	arg_parser.add_argument('-y', '--yaw', type=int,  required=True, help='yaw in degrees')
+	arg_parser.add_argument('-r', '--roll', type=int, required=False, default=0, help='roll in degrees')
+	arg_parser.add_argument('-p', '--pitch', type=int, required=False, default=0, help='pitch in degrees')
+	arg_parser.add_argument('-y', '--yaw', type=int,  required=False, default=0, help='yaw in degrees')
 	return arg_parser.parse_args()
 
 def main():
@@ -59,16 +59,12 @@ def main():
 		r1[i,:] = _r1 / 255.0
 		one1[i,:] = 1.0
 
-		z1_rot[i,:] = _rotated_point_array[2] ### z height offset
 		x1_rot[i,:] = _rotated_point_array[0]
 		y1_rot[i,:] = _rotated_point_array[1]
+		z1_rot[i,:] = _rotated_point_array[2] ### z height offset
 
 		if i > args.rows:
 			break
-
-	# print('x: ', x1)
-	# print('y: ', y1)
-	# print('z: ', z1)
 
 	pre_rotation_data = np.column_stack((x1, y1, z1))
 
