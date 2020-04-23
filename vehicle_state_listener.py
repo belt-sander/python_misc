@@ -12,95 +12,95 @@ import sys
 def parse_args():
     arg_parser = argparse.ArgumentParser(description='A tool to extract data from /vehicle_control_rsp (binary blob) and write to a text file')
     arg_parser.add_argument('-o',  '--output', required=True, help='Desired output file name / path')
-    arg_parser.add_argument('-f',   '--field', required=True, help='Choose either (steering) or (wheel)')
     return arg_parser.parse_args()
 
-def callback(data):
-    args = parse_args()
-    bytearray_data = bytearray()
-    bytearray_data = data.data
+class Output():
+    def __init__(self):
+        self.time_data = None
+        self.id_data = None
+        self.lf_ws = None
+        self.rf_ws = None
+        self.lr_ws = None
+        self.rr_ws = None
+        self.steer = None
 
-    time_array_data = bytearray()
-    time_array_data.append(bytearray_data[0])
-    time_array_data.append(bytearray_data[1])
-    time_array_data.append(bytearray_data[2])
-    time_array_data.append(bytearray_data[3])
-    time_array_data.append(bytearray_data[4])
-    time_array_data.append(bytearray_data[5])
-    time_array_data.append(bytearray_data[6])
-    time_array_data.append(bytearray_data[7])                
-    time_data = struct.unpack('Q', time_array_data)
+    def callback(self, data):
+        args = parse_args()
+        bytearray_data = bytearray()
+        bytearray_data = data.data
 
-    id_array_data = bytearray()
-    id_array_data.append(bytearray_data[32])
-    id_data = struct.unpack('B', id_array_data)
+        time_array_data = bytearray()
+        time_array_data.append(bytearray_data[0])
+        time_array_data.append(bytearray_data[1])
+        time_array_data.append(bytearray_data[2])
+        time_array_data.append(bytearray_data[3])
+        time_array_data.append(bytearray_data[4])
+        time_array_data.append(bytearray_data[5])
+        time_array_data.append(bytearray_data[6])
+        time_array_data.append(bytearray_data[7])                
+        self.time_data = struct.unpack('Q', time_array_data)
 
-    i = 1
+        id_array_data = bytearray()
+        id_array_data.append(bytearray_data[32])
+        self.id_data = struct.unpack('B', id_array_data)
 
-    if args.field == 'wheel':
-        if id_data[0] == 14:    
+        i = 1
+
+        if self.id_data[0] == 14:    
             lf_ws_data = bytearray()
             lf_ws_data.append(bytearray_data[8])
             lf_ws_data.append(bytearray_data[9])
             lf_ws_data.append(bytearray_data[10])
             lf_ws_data.append(bytearray_data[11])
-            lf_ws = struct.unpack('f', lf_ws_data)
+            self.lf_ws = struct.unpack('f', lf_ws_data)
 
             rf_ws_data = bytearray()
             rf_ws_data.append(bytearray_data[12])
             rf_ws_data.append(bytearray_data[13])
             rf_ws_data.append(bytearray_data[14])
             rf_ws_data.append(bytearray_data[15])
-            rf_ws = struct.unpack('f', rf_ws_data)
+            self.rf_ws = struct.unpack('f', rf_ws_data)
 
             lr_ws_data = bytearray()
             lr_ws_data.append(bytearray_data[16])
             lr_ws_data.append(bytearray_data[17])
             lr_ws_data.append(bytearray_data[18])
             lr_ws_data.append(bytearray_data[19])
-            lr_ws = struct.unpack('f', lr_ws_data)
+            self.lr_ws = struct.unpack('f', lr_ws_data)
 
             rr_ws_data = bytearray()
             rr_ws_data.append(bytearray_data[20])
             rr_ws_data.append(bytearray_data[21])
             rr_ws_data.append(bytearray_data[22])
             rr_ws_data.append(bytearray_data[23])
-            rr_ws = struct.unpack('f', rr_ws_data)
+            self.rr_ws = struct.unpack('f', rr_ws_data)
+            self.write()
 
-            if (rf_ws[0] - lf_ws[0]) < 5: ### filter to try and isolate good data from "false" data
-                if lr_ws[0] < 200:
-                    print('time:', time_data[0], 'id:', id_data[0], ' lf (m/s):', "{0:.2f}".format(lf_ws[0]), 'rf (m/s):', "{0:.2f}".format(rf_ws[0]), 'lr (m/s):', "{0:.2f}".format(lr_ws[0]), 'rr (m/s):', "{0:.2f}".format(rr_ws[0]))            
-                    
-                    output_data = ["{0:.6f}".format(time_data[0] * 1e-9), "{0:.4f}".format(lf_ws[0]), "{0:.4f}".format(rf_ws[0]), "{0:.4f}".format(lr_ws[0]), "{0:.4f}".format(rr_ws[0])]
+
+        elif self.id_data[0] == 11:
+            steer_data = bytearray()
+            steer_data.append(bytearray_data[8])
+            steer_data.append(bytearray_data[9])
+            steer_data.append(bytearray_data[10])
+            steer_data.append(bytearray_data[11])
+            self.steer = struct.unpack('f', steer_data)
+
+    def write(self):
+        args = parse_args()
+        if self.time_data is not None:
+            if (self.rf_ws[0] - self.lf_ws[0]) < 5: ### filter to try and isolate good data from "false" data
+                if self.lr_ws[0] < 200: ### filter to try and isolate good data from "false" data
+                    print(print('time:', self.time_data[0], 'id:', self.id_data[0], ' FL (m/s):', "{0:.2f}".format(self.lf_ws[0]), 'FR (m/s):', "{0:.2f}".format(self.rf_ws[0]), 'RL (m/s):', "{0:.2f}".format(self.lr_ws[0]), 'RR (m/s):', "{0:.2f}".format(self.rr_ws[0]), "SA (deg)", "{0:.2f}".format(self.steer[0])))         
+                    output_data = ["{0:.6f}".format(self.time_data[0] * 1e-9), "{0:.4f}".format(self.lf_ws[0]), "{0:.4f}".format(self.rf_ws[0]), "{0:.4f}".format(self.lr_ws[0]), "{0:.4f}".format(self.rr_ws[0]), "{0:.2f}".format(self.steer[0])]
                     
                     with open(args.output, 'a') as the_file:
                         the_file.write(",".join(output_data) + '\n')
 
-    if args.field == 'steering':
-        if id_data[0] == 11:
-            something_data = bytearray()
-            something_data.append(bytearray_data[8])
-            something_data.append(bytearray_data[9])
-            something_data.append(bytearray_data[10])
-            something_data.append(bytearray_data[11])
-            something = struct.unpack('f', something_data)
-            
-            print('time:', time_data[0], 'id:', id_data[0], ' steering angle (deg):', "{0:.2f}".format(something[0]))   
-
-            output_data = ["{0:.6f}".format(time_data[0] * 1e-9), "{0:.2f}".format(something[0])]
-                    
-            with open(args.output, 'a') as the_file:
-                the_file.write(",".join(output_data) + '\n')        
-
-    # else:
-    #     print('incorrect field entered')
-    #     sys.exit(0)
-
-
 def listener():
     args = parse_args()
     rospy.init_node('listener', anonymous=True)
-    rospy.Subscriber('vehicle_control_rsp', VehicleControlMsg, callback)
+    output = Output()
+    rospy.Subscriber('vehicle_control_rsp', VehicleControlMsg, output.callback)
     rospy.spin()
 
 if __name__ == '__main__':
