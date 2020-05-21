@@ -18,7 +18,7 @@ def parse_args():
 def main():
 	args = parse_args()
 	scan1 = np.genfromtxt(args.scan_1)
-	print('scan1 size: ', len(scan1))
+	print('scan1 size: ', len(scan1), '\n')
 
 	### scan 1 ###
 	x1 = np.zeros((len(scan1),1))
@@ -55,13 +55,16 @@ def main():
 
 		x1[i,:] = _x1
 		y1[i,:] = _y1
-		z1[i,:] = _z1 
+		z1[i,:] = _z1 + 2.25 # offset for velodyne fusion vlp32
 		r1[i,:] = _r1 / 255.0
 		one1[i,:] = 1.0
 
 		x1_rot[i,:] = _rotated_point_array[0]
 		y1_rot[i,:] = _rotated_point_array[1]
-		z1_rot[i,:] = _rotated_point_array[2] ### z height offset
+		z1_rot[i,:] = _rotated_point_array[2] + 2.25 # offset for velodyne fusion vlp32
+
+		if i%50000 == 0:
+			print('50000 coordinates imported...')
 
 		if i > args.rows:
 			break
@@ -70,22 +73,22 @@ def main():
 
 	### concatanate scan daterz ###
 	x_y_z_1 = np.concatenate((x1, y1, z1), axis=1)
-	reflectivity_1 = np.concatenate((one1, zero1, zero1, r1), axis=1)
+	reflectivity_1 = np.concatenate((one1, one1, one1, r1), axis=1)
 
-	x_y_z_1_rot = np.concatenate((x1_rot, y1_rot, z1_rot), axis=1) # rotation test
-	reflectivity_1_rot = np.concatenate((zero1, one1, zero1, r1), axis=1) # rotation test
+	# x_y_z_1_rot = np.concatenate((x1_rot, y1_rot, z1_rot), axis=1) # rotation test
+	# reflectivity_1_rot = np.concatenate((zero1, one1, zero1, r1), axis=1) # rotation test
 
 	# open app
 	app = pg.QtGui.QApplication([])
 
 	# array of data
-	plt_1 = gl.GLScatterPlotItem(pos=x_y_z_1, color=reflectivity_1, size=4)
-	plt_1_rot = gl.GLScatterPlotItem(pos=x_y_z_1_rot, color=reflectivity_1_rot, size=4)
+	plt_1 = gl.GLScatterPlotItem(pos=x_y_z_1, color=reflectivity_1, size=5)
+	# plt_1_rot = gl.GLScatterPlotItem(pos=x_y_z_1_rot, color=reflectivity_1_rot, size=5)
 
 	# add widget / plot data	
 	w = gl.GLViewWidget()
 	w.addItem(plt_1)
-	w.addItem(plt_1_rot)
+	# w.addItem(plt_1_rot)
 
 	# add grid
 	g = gl.GLGridItem()
