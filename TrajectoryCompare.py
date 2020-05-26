@@ -6,6 +6,7 @@ import numpy as np
 import argparse
 from pyproj import Proj
 from scipy.signal import savgol_filter
+import time, datetime
 
 def parse_args():
     DEFAULT_OUTPUT_DIR = ''
@@ -22,13 +23,27 @@ def parse_args():
 
 def main():
     args = parse_args()
-    truth = np.genfromtxt(args.truthTrajectory, delimiter='', skip_header=30, skip_footer=1000)
-    compare = np.genfromtxt(args.compareTrajectory, delimiter=',', skip_header=14)
+    truth = np.genfromtxt(args.truthTrajectory, delimiter=',', skip_header=2, skip_footer=0, dtype=None)
+    compare = np.genfromtxt(args.compareTrajectory, delimiter=' ', skip_header=0)
     print("")
-    print("data imported.")
+    print("data imported.", '\n')
     
-    gpsTimeTruth = truth[:,0]
+    gpsTimeTruth = np.zeros((len(truth),1))
     gpsTimeCompare = compare[:,0]
+
+    for i, row in enumerate(truth):
+        year = 2020
+        month = 5
+        day = 13
+        time_in = row[1]
+        test_h = int(time_in[:2])
+        test_m = int(time_in[:5][3:])
+        test_s = int(time_in[:8][6:])
+        test_ms = int(time_in[:12][9:])
+        posix_s = time.mktime(datetime.datetime(year,month,day,test_h, test_m, test_s, test_ms).timetuple())
+        posix_ms = posix_s + (test_ms * 1e-3)
+        gpsTimeTruth[i,: ] = posix_ms
+        # print(posix_ms)
     
     num_truth_poses = np.size(truth, 0)
     num_compare_poses = np.size(compare, 0)
