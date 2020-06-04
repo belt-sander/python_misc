@@ -88,14 +88,64 @@ def main():
     resize_truth_vel_fwd = np.resize(truth_vel_fwd, np.size(truth_vel_fwd))
     interp_compare_fwd_vel_truth = np.interp(gps_time_compare, resize_gps_time_truth, resize_truth_vel_fwd)
 
-    print('mean vel truth: ', np.mean(interp_compare_fwd_vel_truth))
-    print('mean vel CAN: ', np.mean(compare_vel_fwd * 3.6))
-    print('std vel truth: ', np.std(interp_compare_fwd_vel_truth))
-    print('std vel CAN: ', np.std(compare_vel_fwd * 3.6), '\n')
+    print('mean vel truth (km/h): ', np.mean(interp_compare_fwd_vel_truth))
+    print('mean vel CAN (km/h): ', np.mean(compare_vel_fwd * 3.6))
+    print('std vel truth (km/h): ', np.std(interp_compare_fwd_vel_truth))
+    print('std vel CAN (km/h): ', np.std(compare_vel_fwd * 3.6), '\n')
+
+    ve_0 = []
+    ve_1 = []
+    ve_2 = []
+    ve_3 = []
+    ve_4 = []
+    ve_5 = []
+    ve_6 = []
+    ve_7 = []
+    ve_8 = []
+
+    for i, row in enumerate(interp_compare_fwd_vel_truth):
+        if (interp_compare_fwd_vel_truth[i] / 3.6) < 2.5:
+            ve_0.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i]) 
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 2.5 and (interp_compare_fwd_vel_truth[i] / 3.6) < 5:
+            ve_1.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 5 and (interp_compare_fwd_vel_truth[i] / 3.6) < 7.5:
+            ve_2.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 7.5 and (interp_compare_fwd_vel_truth[i] / 3.6) < 10:
+            ve_3.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 10 and (interp_compare_fwd_vel_truth[i] / 3.6) < 12.5:
+            ve_4.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 12.5 and (interp_compare_fwd_vel_truth[i] / 3.6) < 15:
+            ve_5.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 15 and (interp_compare_fwd_vel_truth[i] / 3.6) < 17.5:
+            ve_6.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 17.5 and (interp_compare_fwd_vel_truth[i] / 3.6) < 20:
+            ve_7.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 20 and (interp_compare_fwd_vel_truth[i] / 3.6) < 22.5:
+            ve_8.append(interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i])
+        elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 22.5 and (interp_compare_fwd_vel_truth[i] / 3.6) < 25:
+            ve_9 = interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i]
+        # elif (interp_compare_fwd_vel_truth[i] / 3.6) >= 25 and (interp_compare_fwd_vel_truth[i] / 3.6) < 27.5:
+        #     ve_10 = interp_compare_fwd_vel_truth[i]/3.6 - compare_vel_fwd[i]
+
+    print('mean error from 0 - 2.5   (m/s): ', np.mean(ve_0), ' size: ', np.size(ve_0))
+    print('mean error from 2.5 - 5   (m/s): ', np.mean(ve_1), ' size: ', np.size(ve_1))
+    print('mean error from 5 - 7.5   (m/s): ', np.mean(ve_2), ' size: ', np.size(ve_2))
+    print('mean error from 7.5 - 10  (m/s): ', np.mean(ve_3), ' size: ', np.size(ve_3))
+    print('mean error from 10 - 12.5 (m/s): ', np.mean(ve_4), ' size: ', np.size(ve_4))
+    print('mean error from 12.5 - 15 (m/s): ', np.mean(ve_5), ' size: ', np.size(ve_5))
+    print('mean error from 15 - 17.5 (m/s): ', np.mean(ve_6), ' size: ', np.size(ve_6))
+    print('mean error from 17.5 - 20 (m/s): ', np.mean(ve_7), ' size: ', np.size(ve_7))
+    print('mean error from 20 - 22.5 (m/s): ', np.mean(ve_8), ' size: ', np.size(ve_8))
+    print('mean error from 22.5 - 25 (m/s): ', np.mean(ve_9), ' size: ', np.size(ve_9))
+
+    breakpoints = ['(0) 0 - 2.5 (m/s)', '(1) 2.5 - 5 (m/s)', '(2) 5 - 7.5 (m/s)', '(3) 7.5 - 10 (m/s)', '(4) 10 - 12.5 (m/s)', '(5) 12.5 - 15 (m/s)', '(6) 15 - 17.5 (m/s)', '(7) 17.5 - 20 (m/s)', '(8) 20 - 22.5 (m/s)', '(9) 22.5 - 25 (m/s)']
+    results = [np.mean(ve_0), np.mean(ve_1), np.mean(ve_2), np.mean(ve_3), np.mean(ve_4), np.mean(ve_5), np.mean(ve_6), np.mean(ve_7), np.mean(ve_8), np.mean(ve_9)]
+
+    velocity_error = (interp_compare_fwd_vel_truth/3.6) - compare_vel_fwd
 
     plt.figure(1)
-    plt.plot(gps_time_compare, compare_vel_fwd * 3.6, label='forward vel (km/h)')
-    plt.plot(gps_time_compare, interp_compare_fwd_vel_truth, label='truth vel (km/h)')
+    plt.plot(gps_time_compare, compare_vel_fwd, label='forward vel (m/s)')
+    plt.plot(gps_time_compare, interp_compare_fwd_vel_truth / 3.6, label='truth vel (m/s)')
     plt.legend()
 
     plt.figure(2)
@@ -103,6 +153,17 @@ def main():
     plt.ylabel("utm northing (m)")
     plt.xlabel("utm easting (m)")
     plt.legend()
+
+    fig, (vx) = plt.subplots(1,1, sharex=True, sharey=True)
+    fig.suptitle('forward velocity error')
+    vx.hist(velocity_error, bins=100, label='can velocity', density=True, facecolor='g', alpha=0.75)
+    vx.set_xlabel('error (m/s)')
+    vx.set_ylabel('speed (m/s)')
+    vx.legend()
+
+    plt.figure(4)
+    plt.bar(breakpoints, results)
+    plt.ylabel('mean error (m/s)')
 
     plt.show()
 
