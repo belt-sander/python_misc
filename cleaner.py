@@ -9,7 +9,6 @@ def parse_args():
 	arg_parser = argparse.ArgumentParser(description='simple file cleaner')
 	arg_parser.add_argument('-i', '--input',  required=True, help='raw text file in which you want to clean')
 	arg_parser.add_argument('-o', '--output', required=True, help='place to save text files')
-	arg_parser.add_argument('-f', '--formatted', required=True, help='place to save converted text file format')
 	arg_parser.add_argument('-s', '--size', required=True, type=int, help='number of lines of original file to use')
 	arg_parser.add_argument('-d', '--debug', required=False, default='False', help='print output of original text file, line by line')
 	return arg_parser.parse_args()

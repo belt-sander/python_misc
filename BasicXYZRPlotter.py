@@ -17,7 +17,7 @@ def parse_args():
 
 def main():
 	args = parse_args()
-	scan1 = np.genfromtxt(args.scan_1)
+	scan1 = np.genfromtxt(args.scan_1, delimiter=',')
 	print('scan1 size: ', len(scan1), '\n')
 
 	### scan 1 ###
@@ -37,7 +37,8 @@ def main():
 		_x1 = row[0]
 		_y1 = row[1]
 		_z1 = row[2]
-		_r1 = row[3]
+		_r1 = 255.0
+
 
 		### rotation tests ###
 		'''
@@ -55,7 +56,7 @@ def main():
 
 		x1[i,:] = _x1
 		y1[i,:] = _y1
-		z1[i,:] = _z1 + 2.25 # offset for velodyne fusion vlp32
+		z1[i,:] = _z1 # + 2.25 # offset for velodyne fusion vlp32
 		r1[i,:] = _r1 / 255.0
 		one1[i,:] = 1.0
 
