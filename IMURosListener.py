@@ -17,21 +17,26 @@ def parse_args():
 class Output():
     def __init__(self):
         self.args = parse_args()
-        self.time_data = None
-        self.yaw_rate = []
+        self.file = open(self.args.output, 'a')
+        self.time_header = None
+        self.time_frame = []
+        self.imu_seq = []
+        self.imu_count = 0
 
     def callback(self, data):
-        self.time_data = data.stamp
+        self.time_header = data.stamp
 
-        for i in data.measurements:
-            print(data.measurements.angular_velocity_z_rps[i])
+        for i in range(len(data.measurements)):
+            self.imu_count += 1
+            self.time_frame.append(data.measurements[i].read_timestamp_us)
+            self.imu_seq.append(data.measurements[i].sequenceNo)
+
+            output_data = [str(self.time_header), str(self.time_frame[-1]), str(self.imu_seq[-1]), str(self.imu_count)]
+            self.write(output_data)
 
 
-    def write(self, time, yaw_rate):
-        output_data = [str(time), str(yaw_rate)]
-
-        with open(self.args.output, 'a') as the_file:
-            the_file.write(",".join(output_data) + '\n')
+    def write(self, output_data):
+        self.file.write(",".join(output_data) + '\n')
 
 def listener():
     args = parse_args()
